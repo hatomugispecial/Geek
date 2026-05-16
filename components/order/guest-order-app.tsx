@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -30,10 +31,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   GUEST_STORE_NAME,
-  MENU_CATEGORIES,
+  MENU_CATEGORY_ORDER,
   MENU_ITEMS,
+  MENU_TABS,
+  menuImageUrlForId,
   type MenuCategoryId,
   type MenuItem,
+  type MenuTabId,
 } from "@/lib/order/menu-data";
 import { cn } from "@/lib/utils";
 
@@ -41,9 +45,11 @@ type BottomPanel = "history" | "cart" | "checkout" | null;
 
 type HistoryLine = {
   id: string;
+  menuId: string;
   name: string;
   qty: number;
   unitPrice: number;
+  imageUrl: string;
 };
 
 const QTY_OPTIONS = ["0", "1", "2", "3", "4"] as const;
@@ -52,8 +58,63 @@ function itemsByCategory(categoryId: MenuCategoryId): MenuItem[] {
   return MENU_ITEMS.filter((i) => i.categoryId === categoryId);
 }
 
+function LineThumb({ src, label }: { src: string; label: string }) {
+  return (
+    <div className="relative size-11 shrink-0 overflow-hidden rounded-md border bg-muted ring-1 ring-border">
+      <Image
+        src={src}
+        alt=""
+        fill
+        sizes="44px"
+        className="object-cover"
+      />
+      <span className="sr-only">{label}</span>
+    </div>
+  );
+}
+
+function MenuItemCard({
+  item,
+  onSelect,
+}: {
+  item: MenuItem;
+  onSelect: (item: MenuItem) => void;
+}) {
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => onSelect(item)}
+        className={cn(
+          "flex w-full flex-col overflow-hidden rounded-lg border bg-card text-left ring-1 ring-border transition-colors",
+          "min-h-[44px] hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+        )}
+      >
+        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+          <Image
+            src={item.imageUrl}
+            alt={item.name}
+            fill
+            sizes="(max-width: 430px) 45vw, 200px"
+            className="object-cover"
+            loading="lazy"
+          />
+        </div>
+        <div className="flex flex-1 flex-col gap-1.5 p-2">
+          <span className="line-clamp-2 text-xs font-medium leading-snug sm:text-sm">
+            {item.name}
+          </span>
+          <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">
+            ¥{item.price.toLocaleString("ja-JP")}
+          </span>
+        </div>
+      </button>
+    </li>
+  );
+}
+
 export function GuestOrderApp() {
-  const [category, setCategory] = React.useState<MenuCategoryId>("otsumami");
+  const [tab, setTab] = React.useState<MenuTabId>("all");
   const [cart, setCart] = React.useState<Record<string, number>>({});
   const [history, setHistory] = React.useState<HistoryLine[]>([]);
   const [dialogOpen, setDialogOpen] = React.useState(false);
@@ -109,9 +170,11 @@ export function GuestOrderApp() {
     if (cartLines.length === 0) return;
     const newLines: HistoryLine[] = cartLines.map(({ item, qty }) => ({
       id: crypto.randomUUID(),
+      menuId: item.id,
       name: item.name,
       qty,
       unitPrice: item.price,
+      imageUrl: item.imageUrl,
     }));
     setHistory((prev) => [...prev, ...newLines]);
     setCart({});
@@ -132,8 +195,8 @@ export function GuestOrderApp() {
 
       <div className="flex-1 px-3 pb-28 pt-3">
         <Tabs
-          value={category}
-          onValueChange={(v) => setCategory((v as MenuCategoryId) ?? "otsumami")}
+          value={tab}
+          onValueChange={(v) => setTab((v as MenuTabId) ?? "all")}
           className="gap-0"
         >
           <div className="-mx-1 overflow-x-auto overscroll-x-contain pb-2">
@@ -141,54 +204,61 @@ export function GuestOrderApp() {
               variant="line"
               className="mb-1 inline-flex h-auto min-w-max gap-0.5 bg-transparent px-1 py-0"
             >
-              {MENU_CATEGORIES.map((c) => (
+              {MENU_TABS.map((t) => (
                 <TabsTrigger
-                  key={c.id}
-                  value={c.id}
+                  key={t.id}
+                  value={t.id}
                   className="shrink-0 rounded-md px-2.5 py-2 text-xs data-active:shadow-none sm:text-sm"
                 >
-                  {c.label}
+                  {t.label}
                 </TabsTrigger>
               ))}
             </TabsList>
           </div>
 
-          {MENU_CATEGORIES.map((c) => (
+          {MENU_TABS.map((t) => (
             <TabsContent
-              key={c.id}
-              value={c.id}
+              key={t.id}
+              value={t.id}
               className="mt-0 outline-none focus-visible:outline-none"
             >
-              <ul className="grid grid-cols-2 gap-3">
-                {itemsByCategory(c.id).map((item) => (
-                  <li key={item.id}>
-                    <button
-                      type="button"
-                      onClick={() => openItem(item)}
-                      className={cn(
-                        "flex w-full flex-col overflow-hidden rounded-lg border bg-card text-left ring-1 ring-border transition-colors",
-                        "min-h-[44px] hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
-                      )}
+              {t.id === "all" ? (
+                <div className="flex flex-col gap-8">
+                  {MENU_CATEGORY_ORDER.map((cat) => (
+                    <section
+                      key={cat.id}
+                      className="scroll-mt-4"
+                      aria-labelledby={`cat-${cat.id}`}
                     >
-                      <div className="aspect-square w-full bg-muted">
-                        <div className="flex h-full w-full items-center justify-center px-2 text-center text-[10px] leading-tight text-muted-foreground">
-                          写真
-                          <br />
-                          準備中
-                        </div>
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1 p-2">
-                        <span className="line-clamp-2 text-xs font-medium leading-snug">
-                          {item.name}
-                        </span>
-                        <span className="text-xs tabular-nums text-muted-foreground">
-                          ¥{item.price.toLocaleString("ja-JP")}
-                        </span>
-                      </div>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+                      <h2
+                        id={`cat-${cat.id}`}
+                        className="border-b border-border pb-1.5 text-sm font-semibold tracking-wide text-foreground"
+                      >
+                        {cat.label}
+                      </h2>
+                      <ul className="mt-3 grid grid-cols-2 gap-3">
+                        {itemsByCategory(cat.id).map((item) => (
+                          <MenuItemCard
+                            key={item.id}
+                            item={item}
+                            onSelect={openItem}
+                          />
+                        ))}
+                      </ul>
+                    </section>
+                  ))}
+                </div>
+              ) : (
+                <ul className="grid grid-cols-2 gap-3">
+                  {itemsByCategory(t.id).map((item) => (
+                    <MenuItemCard
+                      key={item.id}
+                      item={item}
+                      onSelect={openItem}
+                    />
+                  ))}
+                </ul>
+              )}
             </TabsContent>
           ))}
         </Tabs>
@@ -209,10 +279,24 @@ export function GuestOrderApp() {
             <>
               <DialogHeader>
                 <DialogTitle>{activeItem.name}</DialogTitle>
-                <DialogDescription>
-                  単価 ¥{activeItem.price.toLocaleString("ja-JP")}（税込想定）
+                <DialogDescription className="space-y-1 text-lg font-semibold tabular-nums text-foreground">
+                  <span>
+                    単価 ¥{activeItem.price.toLocaleString("ja-JP")}
+                  </span>
+                  <span className="block text-xs font-normal text-muted-foreground">
+                    税込想定
+                  </span>
                 </DialogDescription>
               </DialogHeader>
+              <div className="relative mx-auto h-40 w-full max-w-[220px] overflow-hidden rounded-lg border bg-muted ring-1 ring-border">
+                <Image
+                  src={activeItem.imageUrl}
+                  alt={activeItem.name}
+                  fill
+                  sizes="220px"
+                  className="object-cover"
+                />
+              </div>
               <div className="grid gap-2 py-2">
                 <Label htmlFor="qty-select" className="text-xs">
                   数量（0〜4）
@@ -278,15 +362,19 @@ export function GuestOrderApp() {
                     history.map((row) => (
                       <li
                         key={row.id}
-                        className="flex items-center justify-between gap-2 py-3 text-sm"
+                        className="flex items-center gap-3 py-3 text-sm"
                       >
+                        <LineThumb
+                          src={row.imageUrl ?? menuImageUrlForId(row.menuId)}
+                          label={row.name}
+                        />
                         <span className="min-w-0 flex-1 truncate font-medium">
                           {row.name}
                         </span>
                         <span className="shrink-0 tabular-nums text-muted-foreground">
                           ×{row.qty}
                         </span>
-                        <span className="shrink-0 tabular-nums">
+                        <span className="shrink-0 text-base font-semibold tabular-nums">
                           ¥{(row.unitPrice * row.qty).toLocaleString("ja-JP")}
                         </span>
                       </li>
@@ -295,7 +383,7 @@ export function GuestOrderApp() {
                 </ul>
               </ScrollArea>
               <div className="border-t bg-muted/30 px-4 py-3">
-                <div className="flex items-center justify-between text-sm font-semibold">
+                <div className="flex items-center justify-between text-base font-semibold">
                   <span>総額</span>
                   <span className="tabular-nums">
                     ¥{historyTotal.toLocaleString("ja-JP")}
@@ -323,15 +411,16 @@ export function GuestOrderApp() {
                     cartLines.map(({ item, qty }) => (
                       <li
                         key={item.id}
-                        className="flex items-center justify-between gap-2 py-3 text-sm"
+                        className="flex items-center gap-3 py-3 text-sm"
                       >
+                        <LineThumb src={item.imageUrl} label={item.name} />
                         <span className="min-w-0 flex-1 truncate font-medium">
                           {item.name}
                         </span>
                         <span className="shrink-0 tabular-nums text-muted-foreground">
                           ×{qty}
                         </span>
-                        <span className="shrink-0 tabular-nums">
+                        <span className="shrink-0 text-base font-semibold tabular-nums">
                           ¥{(item.price * qty).toLocaleString("ja-JP")}
                         </span>
                       </li>
@@ -340,7 +429,7 @@ export function GuestOrderApp() {
                 </ul>
               </ScrollArea>
               <div className="border-t bg-muted/30 px-4 py-3">
-                <div className="flex items-center justify-between text-sm font-semibold">
+                <div className="flex items-center justify-between text-base font-semibold">
                   <span>小計</span>
                   <span className="tabular-nums">
                     ¥{cartSubtotal.toLocaleString("ja-JP")}
@@ -368,15 +457,16 @@ export function GuestOrderApp() {
                     cartLines.map(({ item, qty }) => (
                       <li
                         key={item.id}
-                        className="flex items-center justify-between gap-2 py-3 text-sm"
+                        className="flex items-center gap-3 py-3 text-sm"
                       >
+                        <LineThumb src={item.imageUrl} label={item.name} />
                         <span className="min-w-0 flex-1 truncate font-medium">
                           {item.name}
                         </span>
                         <span className="shrink-0 tabular-nums text-muted-foreground">
                           ×{qty}
                         </span>
-                        <span className="shrink-0 tabular-nums">
+                        <span className="shrink-0 text-base font-semibold tabular-nums">
                           ¥{(item.price * qty).toLocaleString("ja-JP")}
                         </span>
                       </li>
@@ -385,7 +475,7 @@ export function GuestOrderApp() {
                 </ul>
               </ScrollArea>
               <SheetFooter className="border-t bg-background px-4 py-3 sm:flex-col">
-                <div className="mb-3 flex w-full items-center justify-between text-sm font-semibold">
+                <div className="mb-3 flex w-full items-center justify-between text-base font-semibold">
                   <span>お支払い予定（参考）</span>
                   <span className="tabular-nums">
                     ¥{cartSubtotal.toLocaleString("ja-JP")}
