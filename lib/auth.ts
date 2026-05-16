@@ -1,6 +1,5 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "@better-auth/drizzle-adapter";
-import { nextCookies } from "better-auth/next-js";
 import * as authSchema from "@/lib/db/auth-schema";
 import { authDb } from "@/lib/db/drizzle-auth";
 import { isRelaxedEnvBuildPhase } from "@/lib/env-build";
@@ -121,5 +120,12 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
   },
-  plugins: [nextCookies()],
+  /**
+   * nextCookies の after フックは `cookies().set()` に依存する。
+   * Next.js 16 の Route Handler では読み取り専用ストア上で set が失敗し、
+   * サインアップ等が HTTP 500 になるケースがある。
+   * Set-Cookie は better-call が Response の `set-cookie` に載せるため、
+   * 本プロジェクトではプラグインなしで動作させる。
+   */
+  plugins: [],
 });
