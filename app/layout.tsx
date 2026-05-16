@@ -1,8 +1,12 @@
 import type { Metadata, Viewport } from "next";
-import { Noto_Sans_JP } from "next/font/google";
-import { SiteFooter } from "@/components/SiteFooter";
-import { SiteHeader } from "@/components/SiteHeader";
+import { Geist, Noto_Sans_JP } from "next/font/google";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import "./globals.css";
+
+const geist = Geist({
+  subsets: ["latin"],
+  variable: "--font-sans",
+});
 
 const notoSansJp = Noto_Sans_JP({
   subsets: ["latin"],
@@ -12,9 +16,9 @@ const notoSansJp = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "Geek | やさしいこれからのプロジェクト",
+  title: "OSAKI ダイニング | 注文オペレーション",
   description:
-    "Geek は、やわらかい雰囲気で進める開発・デザインのためのひとときの入り口です。",
+    "株式会社 OSAKI ダイニング向けの注文・店舗オペレーション管理コンソール（デモ画面）です。",
 };
 
 export const viewport: Viewport = {
@@ -28,13 +32,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="ja" className={`${notoSansJp.variable} h-full`}>
+    <html
+      lang="ja"
+      className={`${geist.variable} ${notoSansJp.variable} h-full`}
+    >
       <body
-        className={`${notoSansJp.className} flex min-h-dvh flex-col overflow-x-hidden bg-[#fffafd] text-rose-950 antialiased`}
+        className={`${notoSansJp.className} min-h-dvh overflow-x-hidden bg-background font-sans text-foreground antialiased`}
       >
-        <SiteHeader />
-        <main className="flex w-full flex-1 flex-col">{children}</main>
-        <SiteFooter />
+        <TooltipProvider delay={200}>{children}</TooltipProvider>
       </body>
     </html>
   );
