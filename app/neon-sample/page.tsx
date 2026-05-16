@@ -173,9 +173,9 @@ export default async function NeonSamplePage() {
               環境変数 <code className="rounded bg-muted px-1">DATABASE_URL</code> が未設定です。
             </p>
             <p>
-              リポジトリの <code className="rounded bg-muted px-1">.env.example</code> を参考に{" "}
-              <code className="rounded bg-muted px-1">.env.local</code> を作成し、Neon
-              の接続文字列を設定してから再度開いてください。
+              プロジェクトルートに <code className="rounded bg-muted px-1">.env.local</code>{" "}
+              を作成し、<code className="rounded bg-muted px-1">DATABASE_URL</code> に Neon
+              の接続文字列を設定してから再度開いてください（README 下記「環境変数（.env.local）」を参照）。
             </p>
           </div>
         ) : result.reason === "schema_missing" ? (

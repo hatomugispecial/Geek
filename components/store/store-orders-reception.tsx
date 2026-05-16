@@ -89,7 +89,9 @@ export function StoreOrdersReception() {
         seat && seat.trim().length > 0
           ? `?seat=${encodeURIComponent(seat.trim())}`
           : "";
-      const res = await fetch(`/api/store/orders${q}`);
+      const res = await fetch(`/api/store/orders${q}`, {
+        credentials: "include",
+      });
       const data = (await res.json()) as {
         ok?: boolean;
         orders?: NeonOrdersRow[];
@@ -216,6 +218,7 @@ export function StoreOrdersReception() {
         `/api/store/orders/${encodeURIComponent(orderId)}/lines/${encodeURIComponent(lineId)}`,
         {
           method: "PATCH",
+          credentials: "include",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ status }),
         },

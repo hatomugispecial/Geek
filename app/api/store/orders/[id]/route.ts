@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireStaffSession } from "@/lib/auth/require-staff-api";
 import { patchOrderStatusFromEnv } from "@/lib/db/store-orders";
 import { isOrderFlowStatus } from "@/lib/store/order-flow";
 
@@ -7,6 +8,9 @@ export const dynamic = "force-dynamic";
 type RouteContext = { params: Promise<{ id: string }> };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const authResult = await requireStaffSession(request);
+  if (!authResult.ok) return authResult.response;
+
   const { id } = await context.params;
   let body: unknown;
   try {

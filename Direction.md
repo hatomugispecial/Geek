@@ -135,3 +135,5 @@ API 側にも認可チェックを実装（UI ガードだけにしない）。
 未ログインで従業員画面へ入れない
 ログイン後は従業員機能が利用できる
 顧客向け画面はログイン不要で使える
+
+---------------------ここまで反映済み（Better Auth・`/login`・`/register`・`proxy.ts` で `/store` と `/api/store/**` を保護・店舗 API は `requireStaffSession`）

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { requireStaffSession } from "@/lib/auth/require-staff-api";
 import { patchOrderLineStatusFromEnv } from "@/lib/db/store-orders";
 import { isOrderFlowStatus } from "@/lib/store/order-flow";
 
@@ -9,6 +10,9 @@ type RouteContext = {
 };
 
 export async function PATCH(request: Request, context: RouteContext) {
+  const authResult = await requireStaffSession(request);
+  if (!authResult.ok) return authResult.response;
+
   const { id: orderId, lineId } = await context.params;
   let body: unknown;
   try {

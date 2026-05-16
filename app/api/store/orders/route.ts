@@ -1,9 +1,13 @@
 import { NextResponse } from "next/server";
+import { requireStaffSession } from "@/lib/auth/require-staff-api";
 import { listOrdersForStoreFromEnv } from "@/lib/db/store-orders";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  const authResult = await requireStaffSession(request);
+  if (!authResult.ok) return authResult.response;
+
   const { searchParams } = new URL(request.url);
   const seat = searchParams.get("seat") ?? undefined;
 

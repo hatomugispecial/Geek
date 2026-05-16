@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronDown,
   ClipboardList,
@@ -59,9 +60,23 @@ import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { COMPANY } from "@/lib/orders-mock";
 import { StoreOrdersReception } from "@/components/store/store-orders-reception";
+import { authClient } from "@/lib/auth-client";
 
 export function OrdersDashboard() {
+  const router = useRouter();
+  const { data: session, isPending } = authClient.useSession();
   const [kitchenNotify, setKitchenNotify] = React.useState(true);
+
+  const displayName =
+    session?.user?.name?.trim() ||
+    session?.user?.email?.trim() ||
+    "ログイン中";
+
+  async function signOut() {
+    await authClient.signOut();
+    router.push("/login");
+    router.refresh();
+  }
 
   return (
     <SidebarProvider>
@@ -162,18 +177,31 @@ export function OrdersDashboard() {
             <DropdownMenu>
               <DropdownMenuTrigger className="flex h-9 min-w-[44px] items-center gap-2 rounded-md px-2 text-base font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:h-10">
                 <Avatar className="size-7 sm:size-8">
-                  <AvatarFallback className="text-sm">運</AvatarFallback>
+                  <AvatarFallback className="text-sm">
+                    {isPending
+                      ? "…"
+                      : (displayName.slice(0, 1) || "?").toUpperCase()}
+                  </AvatarFallback>
                 </Avatar>
-                <span className="hidden sm:inline">運用 太郎</span>
+                <span className="hidden max-w-[12rem] truncate sm:inline">
+                  {isPending ? "確認中…" : displayName}
+                </span>
                 <ChevronDown className="size-4 opacity-60" aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-48 shadow-none ring-1 ring-border">
                 <DropdownMenuLabel>アカウント</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>プロフィール</DropdownMenuItem>
-                <DropdownMenuItem>通知設定</DropdownMenuItem>
+                <DropdownMenuItem disabled>プロフィール</DropdownMenuItem>
+                <DropdownMenuItem disabled>通知設定</DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem>ログアウト</DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={(ev) => {
+                    ev.preventDefault();
+                    void signOut();
+                  }}
+                >
+                  ログアウト
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
