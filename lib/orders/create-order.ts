@@ -12,6 +12,8 @@ export type OrderLineInput = {
 
 export type CreateOrderBody = {
   storeCode?: string;
+  /** 会計・店舗画面での集計用（任意） */
+  seatLabel?: string;
   lines: OrderLineInput[];
 };
 
@@ -103,7 +105,8 @@ export async function createOrderInDb(
     };
   }
 
-  const { storeCode: rawStore, lines: rawLines } = body as CreateOrderBody;
+  const { storeCode: rawStore, seatLabel: rawSeat, lines: rawLines } =
+    body as CreateOrderBody;
   const lines = normalizeLines(rawLines);
   if (!lines) {
     return {
@@ -119,6 +122,11 @@ export async function createOrderInDb(
     typeof rawStore === "string" && rawStore.length > 0 && rawStore.length <= 100
       ? rawStore
       : "osaki-shinagawa";
+
+  let seatLabel = "";
+  if (typeof rawSeat === "string") {
+    seatLabel = rawSeat.trim().slice(0, 64);
+  }
 
   const expanded = expandFromCatalog(lines);
   if ("error" in expanded) {
@@ -145,17 +153,18 @@ export async function createOrderInDb(
           )
       ),
       new_order AS (
-        INSERT INTO orders (store_code, total_yen, line_count, status)
+        INSERT INTO orders (store_code, seat_label, total_yen, line_count, status)
         SELECT
           ${storeCode},
+          ${seatLabel},
           (SELECT COALESCE(SUM(unit_price_yen * qty), 0)::int FROM expanded),
           (SELECT COUNT(*)::int FROM expanded),
-          'received'
+          'pending'
         RETURNING id
       )
       INSERT INTO
-        order_items (order_id, menu_id, name, qty, unit_price_yen)
-      SELECT new_order.id, e.menu_id, e.name, e.qty, e.unit_price_yen
+        order_items (order_id, menu_id, name, qty, unit_price_yen, status)
+      SELECT new_order.id, e.menu_id, e.name, e.qty, e.unit_price_yen, 'pending'::text
       FROM new_order
         CROSS JOIN expanded e
       RETURNING order_id
@@ -172,10 +181,28 @@ export async function createOrderInDb(
     return { ok: true, orderId: first.order_id };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
+    if (msg.includes("order_items") && msg.includes("status")) {
+      return {
+        ok: false,
+        httpStatus: 503,
+        code: "schema_outdated",
+        message:
+          "order_items に status 列がありません。Neon で db/orders-migration-v3-order-item-status.sql を実行するか、db/orders-schema.sql を再適用してください。",
+      };
+    }
     if (
-      msg.includes("relation") &&
-      msg.includes("does not exist")
+      msg.includes("seat_label") ||
+      (msg.includes("column") && msg.includes("does not exist"))
     ) {
+      return {
+        ok: false,
+        httpStatus: 503,
+        code: "schema_outdated",
+        message:
+          "orders テーブルが旧バージョンです。Neon で db/orders-migration-v2-seat-status.sql を実行するか、db/orders-schema.sql を再適用してください。",
+      };
+    }
+    if (msg.includes("relation") && msg.includes("does not exist")) {
       return {
         ok: false,
         httpStatus: 503,

@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -60,6 +61,21 @@ const SPLIT_PEOPLE_OPTIONS = Array.from({ length: 20 }, (_, i) =>
 ) as string[];
 
 const MAX_QTY_PER_ITEM = 99;
+
+function storageKey(kind: "cart" | "history", seat: string) {
+  return `geek:v1:${kind}:${encodeURIComponent(seat)}`;
+}
+
+function readSessionJson<T>(key: string, fallback: T): T {
+  if (typeof window === "undefined") return fallback;
+  try {
+    const raw = window.sessionStorage.getItem(key);
+    if (!raw) return fallback;
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
 
 function itemsByCategory(categoryId: MenuCategoryId): MenuItem[] {
   return MENU_ITEMS.filter((i) => i.categoryId === categoryId);
@@ -130,7 +146,7 @@ function MenuItemCard({
   );
 }
 
-export function GuestOrderApp() {
+export function GuestOrderApp({ seatCode }: { seatCode: string }) {
   const [tab, setTab] = React.useState<MenuTabId>("all");
   const [cart, setCart] = React.useState<Record<string, number>>({});
   const [history, setHistory] = React.useState<HistoryLine[]>([]);
@@ -148,6 +164,29 @@ export function GuestOrderApp() {
 
   const cartRef = React.useRef(cart);
   cartRef.current = cart;
+
+  const loadedSeatRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    if (loadedSeatRef.current !== seatCode) {
+      loadedSeatRef.current = seatCode;
+      setCart(readSessionJson(storageKey("cart", seatCode), {}));
+      setHistory(readSessionJson(storageKey("history", seatCode), []));
+      return;
+    }
+    try {
+      window.sessionStorage.setItem(
+        storageKey("cart", seatCode),
+        JSON.stringify(cart),
+      );
+      window.sessionStorage.setItem(
+        storageKey("history", seatCode),
+        JSON.stringify(history),
+      );
+    } catch {
+      /* ストレージ不可時は無視 */
+    }
+  }, [seatCode, cart, history]);
 
   React.useEffect(() => {
     if (activeItem) setDialogQty("1");
@@ -247,6 +286,7 @@ export function GuestOrderApp() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           storeCode: "osaki-shinagawa",
+          seatLabel: seatCode.trim(),
           lines: cartLines.map(({ item, qty }) => ({
             menuId: item.id,
             qty,
@@ -280,7 +320,7 @@ export function GuestOrderApp() {
       setCart({});
       setPanel(null);
       setCheckoutError(null);
-      setOrderSuccessMessage("注文を送信し、履歴に反映しました。");
+      setOrderSuccessMessage("注文が正常に送信されました");
       window.setTimeout(() => setOrderSuccessMessage(null), 5000);
     } catch {
       setCheckoutError(
@@ -293,13 +333,33 @@ export function GuestOrderApp() {
 
   return (
     <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-[#f4efe6]">
-      <header className="sticky top-0 z-20 border-b border-stone-300/40 bg-[#f4efe6]/95 px-4 py-3 backdrop-blur-sm">
-        <p className="text-[10px] font-medium tracking-wide text-stone-600">
-          株式会社 OSAKI ダイニング（架空）
-        </p>
-        <h1 className="text-lg font-semibold tracking-wide text-stone-900">
-          {GUEST_STORE_NAME}
-        </h1>
+      <header className="sticky top-0 z-20 border-b border-stone-300/40 bg-[#f4efe6]/95 backdrop-blur-sm">
+        <div className="px-4 py-3">
+          <p className="text-[10px] font-medium tracking-wide text-stone-600">
+            株式会社 OSAKI ダイニング（架空）
+          </p>
+          <h1 className="text-lg font-semibold tracking-wide text-stone-900">
+            {GUEST_STORE_NAME}
+          </h1>
+        </div>
+        <div className="border-t border-orange-200/40 bg-[#fffbf7]/90 px-4 py-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[10px] font-medium tracking-wide text-stone-600">
+                この席の注文ページ
+              </p>
+              <p className="truncate text-sm font-semibold tracking-wide text-stone-900">
+                {seatCode}
+              </p>
+            </div>
+            <Link
+              href="/Order"
+              className="shrink-0 rounded-[10px] border border-orange-300/60 bg-orange-50 px-3 py-2 text-xs font-semibold text-orange-950 transition-colors hover:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600/40"
+            >
+              席を変更
+            </Link>
+          </div>
+        </div>
       </header>
 
       {orderSuccessMessage ? (
@@ -689,6 +749,9 @@ export function GuestOrderApp() {
                 </ul>
               </ScrollArea>
               <SheetFooter className="border-t border-orange-200/40 bg-orange-50/50 px-4 py-3 sm:flex-col">
+                <p className="mb-3 rounded-md border border-orange-200/60 bg-[#fffbf7] px-3 py-2 text-xs leading-relaxed text-stone-700">
+                  送信時の座席は「{seatCode}」として店舗へ送られます。別の席の場合は画面上部の「席を変更」からやり直してください。
+                </p>
                 <div className="mb-3 flex w-full items-center justify-between text-base font-semibold text-stone-900">
                   <span>小計</span>
                   <span className="tabular-nums text-orange-950">

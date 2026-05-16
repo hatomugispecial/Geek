@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { fetchNeonOrdersDigest } from "@/lib/db/neon";
+import {
+  ORDER_FLOW_STATUS_LABEL,
+  normalizeLegacyStatus,
+} from "@/lib/store/order-flow";
 
 export const metadata: Metadata = {
   title: "Neon 注文データ | geek",
@@ -67,14 +71,28 @@ export default async function NeonSamplePage() {
                         {formatJa(order.created_at)}
                       </span>
                     </div>
-                    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-4">
+                    <dl className="mt-2 grid grid-cols-2 gap-x-3 gap-y-1 text-xs sm:grid-cols-3">
                       <div>
                         <dt className="text-muted-foreground">店舗コード</dt>
                         <dd className="font-medium">{order.store_code}</dd>
                       </div>
                       <div>
+                        <dt className="text-muted-foreground">座席</dt>
+                        <dd className="font-medium">
+                          {order.seat_label.trim() === ""
+                            ? "（未入力）"
+                            : order.seat_label}
+                        </dd>
+                      </div>
+                      <div>
                         <dt className="text-muted-foreground">ステータス</dt>
-                        <dd className="font-medium">{order.status}</dd>
+                        <dd className="font-medium">
+                          {
+                            ORDER_FLOW_STATUS_LABEL[
+                              normalizeLegacyStatus(order.status)
+                            ]
+                          }
+                        </dd>
                       </div>
                       <div>
                         <dt className="text-muted-foreground">行数</dt>
@@ -93,6 +111,7 @@ export default async function NeonSamplePage() {
                           <tr className="border-b border-border bg-muted/40 text-left">
                             <th className="p-2 font-semibold">menu_id</th>
                             <th className="p-2 font-semibold">name</th>
+                            <th className="p-2 font-semibold">ステータス</th>
                             <th className="p-2 font-semibold">qty</th>
                             <th className="p-2 font-semibold">単価（円）</th>
                             <th className="p-2 font-semibold">小計（円）</th>
@@ -102,7 +121,7 @@ export default async function NeonSamplePage() {
                           {order.lines.length === 0 ? (
                             <tr>
                               <td
-                                colSpan={5}
+                                colSpan={6}
                                 className="p-2 text-center text-muted-foreground"
                               >
                                 明細なし
@@ -118,6 +137,15 @@ export default async function NeonSamplePage() {
                                   {line.menu_id}
                                 </td>
                                 <td className="p-2">{line.name}</td>
+                                <td className="p-2 font-medium">
+                                  {
+                                    ORDER_FLOW_STATUS_LABEL[
+                                      normalizeLegacyStatus(
+                                        line.status ?? "pending",
+                                      )
+                                    ]
+                                  }
+                                </td>
                                 <td className="p-2 tabular-nums">{line.qty}</td>
                                 <td className="p-2 tabular-nums">
                                   ¥{line.unit_price_yen.toLocaleString("ja-JP")}

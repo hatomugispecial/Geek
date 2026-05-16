@@ -1,15 +1,19 @@
 import { neon } from "@neondatabase/serverless";
 
 export type NeonOrdersLine = {
+  id?: string | number;
   menu_id: string;
   name: string;
   qty: number;
   unit_price_yen: number;
+  /** 明細ごとのフロー状態（未マイグレ時は欠落し得る） */
+  status?: string;
 };
 
 export type NeonOrdersRow = {
   id: string;
   store_code: string;
+  seat_label: string;
   total_yen: number;
   line_count: number;
   status: string;
@@ -63,6 +67,7 @@ export async function fetchNeonOrdersDigest(): Promise<NeonOrdersResult> {
       SELECT
         o.id,
         o.store_code,
+        o.seat_label,
         o.total_yen,
         o.line_count,
         o.status,
@@ -70,10 +75,12 @@ export async function fetchNeonOrdersDigest(): Promise<NeonOrdersResult> {
         COALESCE(
           json_agg(
             json_build_object(
+              'id', i.id,
               'menu_id', i.menu_id,
               'name', i.name,
               'qty', i.qty,
-              'unit_price_yen', i.unit_price_yen
+              'unit_price_yen', i.unit_price_yen,
+              'status', i.status
             )
             ORDER BY i.id
           ) FILTER (WHERE i.id IS NOT NULL),
@@ -81,7 +88,7 @@ export async function fetchNeonOrdersDigest(): Promise<NeonOrdersResult> {
         ) AS lines
       FROM orders o
       LEFT JOIN order_items i ON i.order_id = o.id
-      GROUP BY o.id, o.store_code, o.total_yen, o.line_count, o.status, o.created_at
+      GROUP BY o.id, o.store_code, o.seat_label, o.total_yen, o.line_count, o.status, o.created_at
       ORDER BY o.created_at DESC
       LIMIT 50
     `;
@@ -91,6 +98,7 @@ export async function fetchNeonOrdersDigest(): Promise<NeonOrdersResult> {
     ).map((r) => ({
       id: String(r.id),
       store_code: String(r.store_code ?? ""),
+      seat_label: String(r.seat_label ?? ""),
       total_yen: Number(r.total_yen ?? 0),
       line_count: Number(r.line_count ?? 0),
       status: String(r.status ?? ""),

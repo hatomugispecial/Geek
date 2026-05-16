@@ -10,11 +10,17 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 4. [Vercel](https://vercel.com/) にデプロイする場合は、プロジェクトの **Environment Variables** に `DATABASE_URL` を登録する（Neon の「Connect to Vercel」から連携してもよい）。
 5. ブラウザで [`/neon-sample`](http://localhost:3000/neon-sample) を開き、注文一覧（または空メッセージ）が表示されれば接続成功です。任意で [`db/neon-sample.sql`](./db/neon-sample.sql) を実行すると別デモ用テーブル `neon_sample` も作成できます。
 
-### 注文 API（Neon に保存）
+### 注文 API（客向け → Neon）
 
-1. 上記のとおり `orders` / `order_items` が存在していること。
-2. 客向け画面 `/Order` の「注文リスト」→「注文する」で **`POST /api/orders`** が呼ばれ、検証済みの内容が DB に保存される。
+1. 上記のとおり `orders` / `order_items` が存在していること（新規は `orders-schema.sql`、旧 DB は `orders-migration-v2-seat-status.sql` も参照）。
+2. [`/Order`](http://localhost:3000/Order) の「注文リスト」→「注文する」で **`POST /api/orders`** が呼ばれ、検証済みの内容が DB に保存される（任意の座席番号を同送可能）。
 3. `DATABASE_URL` が未設定のときは API は 503 を返す。
+
+### 店舗コンソール（受信注文）
+
+1. `DATABASE_URL` と `orders` / `order_items`（新規は `orders-schema.sql`、旧 DB は `orders-migration-v2-seat-status.sql` と [`db/orders-migration-v3-order-item-status.sql`](./db/orders-migration-v3-order-item-status.sql) を参照）が用意できていること。
+2. [`/store`](http://localhost:3000/store) の「受信注文（Neon）」で一覧取得（`GET /api/store/orders`）。座席をクエリ指定すると `summary` にメニュー別の合計数量・金額（`menus`）と合計金額が含まれる。**料理（明細）ごとの**ステータス変更は `PATCH /api/store/orders/:id/lines/:lineId`。注文ヘッダの `orders.status` は明細から自動集計される。全明細を同じ状態に揃える場合は `PATCH /api/store/orders/:id` も利用できる。
+3. 既存 DB には [`db/orders-migration-v2-seat-status.sql`](./db/orders-migration-v2-seat-status.sql) で `seat_label` とステータス制約を、[`db/orders-migration-v3-order-item-status.sql`](./db/orders-migration-v3-order-item-status.sql) で `order_items.status` を追加できる。
 
 ## Getting Started
 
