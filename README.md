@@ -5,14 +5,14 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 サーバー側から Neon の PostgreSQL に接続する手順です。
 
 1. [Neon](https://neon.tech/) でプロジェクトを作成し、ブランチの **Connection string**（`postgresql://...`）を控える。
-2. Neon の **SQL Editor** でリポジトリ内の [`db/neon-sample.sql`](./db/neon-sample.sql) を実行し、`neon_sample` テーブルとサンプル行を作成する。
+2. Neon の **SQL Editor** でリポジトリ内の [`db/orders-schema.sql`](./db/orders-schema.sql) を実行し、`orders` と `order_items` を作成する（注文の保存先・[`/neon-sample`](http://localhost:3000/neon-sample) の表示元）。
 3. ローカルでは `.env.example` を参考に `.env.local` を作成し、`DATABASE_URL` に接続文字列を設定する。
 4. [Vercel](https://vercel.com/) にデプロイする場合は、プロジェクトの **Environment Variables** に `DATABASE_URL` を登録する（Neon の「Connect to Vercel」から連携してもよい）。
-5. ブラウザで [`/neon-sample`](http://localhost:3000/neon-sample) を開き、テーブル内容が表示されれば接続成功です。
+5. ブラウザで [`/neon-sample`](http://localhost:3000/neon-sample) を開き、注文一覧（または空メッセージ）が表示されれば接続成功です。任意で [`db/neon-sample.sql`](./db/neon-sample.sql) を実行すると別デモ用テーブル `neon_sample` も作成できます。
 
 ### 注文 API（Neon に保存）
 
-1. Neon の SQL Editor で [`db/orders-schema.sql`](./db/orders-schema.sql) を実行し、`orders` と `order_items` を作成する。
+1. 上記のとおり `orders` / `order_items` が存在していること。
 2. 客向け画面 `/Order` の「注文リスト」→「注文する」で **`POST /api/orders`** が呼ばれ、検証済みの内容が DB に保存される。
 3. `DATABASE_URL` が未設定のときは API は 503 を返す。
 

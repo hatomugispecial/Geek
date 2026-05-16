@@ -51,7 +51,7 @@ Vercel と Neon を接続していること
 Neon の PostgreSQL にサンプルデータを格納していること
 Next.js から Neon の PostgreSQL に接続し、サンプルデータを表示できること
 
----------------------ここまで反映済み（Neon / `DATABASE_URL` / `/neon-sample`）
+---------------------ここまで反映済み（Neon / `DATABASE_URL` / `/neon-sample` は `orders`・`order_items` 表示）
 
 ウェブ API として注文 API を Next.js の Route Handler 等を用いて実装し、必要なデータを受け取ってデータベース等に保存する処理を実装してください。
 注文確定ボタンを実装し、新たに作ったウェブ API エンドポイントに対するリクエストをクリック時送信するよう実装してください。

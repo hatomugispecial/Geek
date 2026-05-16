@@ -46,7 +46,7 @@ export default function HomePage() {
           size="lg"
           className="h-12 w-full justify-center rounded-[14px] text-base"
         >
-          Neon DB 接続サンプル
+          Neon 注文データ（DB 表示）
         </Button>
       </div>
       <Card className="shadow-none ring-1 ring-border">
