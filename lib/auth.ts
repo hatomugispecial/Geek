@@ -3,17 +3,22 @@ import { drizzleAdapter } from "@better-auth/drizzle-adapter";
 import { nextCookies } from "better-auth/next-js";
 import * as authSchema from "@/lib/db/auth-schema";
 import { authDb } from "@/lib/db/drizzle-auth";
+import { isRelaxedEnvBuildPhase } from "@/lib/env-build";
 
 const isProd = process.env.NODE_ENV === "production";
+const relaxedBuild = isRelaxedEnvBuildPhase();
 
 function resolveBetterAuthSecret(): string {
   const raw = process.env.BETTER_AUTH_SECRET?.trim();
   if (raw) {
     if (raw.length < 32) {
-      if (isProd) {
+      if (isProd && !relaxedBuild) {
         throw new Error(
           "BETTER_AUTH_SECRET は 32 文字以上のランダム文字列を設定してください。",
         );
+      }
+      if (isProd && relaxedBuild) {
+        return "build-placeholder-secret-32chars-minimum!!";
       }
       console.warn(
         "[auth] BETTER_AUTH_SECRET が 32 文字未満のため、開発用の長いフォールバックに置き換えています（本番では 32 文字以上を必ず設定してください）。",
@@ -22,10 +27,13 @@ function resolveBetterAuthSecret(): string {
     }
     return raw;
   }
-  if (isProd) {
+  if (isProd && !relaxedBuild) {
     throw new Error(
       "BETTER_AUTH_SECRET が未設定です。32 文字以上のランダム文字列を設定してください。",
     );
+  }
+  if (relaxedBuild) {
+    return "build-placeholder-secret-32chars-minimum!!";
   }
   console.warn(
     "[auth] BETTER_AUTH_SECRET 未設定のため開発用フォールバックを使います。`.env.local` に 32 文字以上の値を設定してください。",
@@ -37,10 +45,13 @@ function resolveBetterAuthSecret(): string {
 function resolveBetterAuthBaseURL(): string {
   const raw = process.env.BETTER_AUTH_URL?.trim();
   if (raw) return raw;
-  if (isProd) {
+  if (isProd && !relaxedBuild) {
     throw new Error(
       "BETTER_AUTH_URL が未設定です。本番サイトの公開 URL（例: https://example.com）を設定してください。",
     );
+  }
+  if (relaxedBuild) {
+    return "https://build.placeholder.local";
   }
   console.warn(
     "[auth] BETTER_AUTH_URL 未設定のため http://localhost:3000 を使います。ポートが違う場合は .env.local に設定してください。",

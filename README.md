@@ -25,7 +25,9 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## 環境変数（`.env.local`）
 
-ローカルではリポジトリ直下に **`.env.local`** を置き、Next.js が読み込みます（Git には含めないでください）。Vercel では同じ名前を **Environment Variables** に登録します。
+ローカルではリポジトリ直下に **`.env.local`** を置き、Next.js が読み込みます（Git には含めないでください）。Vercel では同じ名前を **Environment Variables** に登録します。**Production / Preview のビルド**でも `DATABASE_URL`・`BETTER_AUTH_SECRET`（32 文字以上）・`BETTER_AUTH_URL`（デプロイ先の `https://…`）を読み込めるようにしてください（未設定だとビルドやランタイムで失敗します）。
+
+緊急時のみ CI で `SKIP_ENV_VALIDATION=true` を渡すと、`next build` 中の env 厳格チェックを緩めます（通常は使わないでください）。
 
 ```bash
 # Neon（PostgreSQL）接続文字列
