@@ -141,6 +141,10 @@ export function GuestOrderApp() {
   const [splitPeopleValue, setSplitPeopleValue] = React.useState("2");
   const [cartAddError, setCartAddError] = React.useState<string | null>(null);
   const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
+  const [orderSubmitting, setOrderSubmitting] = React.useState(false);
+  const [orderSuccessMessage, setOrderSuccessMessage] = React.useState<
+    string | null
+  >(null);
 
   const cartRef = React.useRef(cart);
   cartRef.current = cart;
@@ -225,8 +229,8 @@ export function GuestOrderApp() {
       ? Math.ceil(historyTotal / splitPeopleParsed)
       : null;
 
-  const confirmOrder = () => {
-    if (cartLines.length === 0) return;
+  const confirmOrder = async () => {
+    if (cartLines.length === 0 || orderSubmitting) return;
     setCheckoutError(null);
     const soldOutLines = cartLines.filter(({ item }) => item.soldOut);
     if (soldOutLines.length > 0) {
@@ -235,18 +239,56 @@ export function GuestOrderApp() {
       );
       return;
     }
-    const newLines: HistoryLine[] = cartLines.map(({ item, qty }) => ({
-      id: crypto.randomUUID(),
-      menuId: item.id,
-      name: item.name,
-      qty,
-      unitPrice: item.price,
-      imageUrl: item.imageUrl,
-    }));
-    setHistory((prev) => [...prev, ...newLines]);
-    setCart({});
-    setPanel(null);
-    setCheckoutError(null);
+
+    setOrderSubmitting(true);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          storeCode: "osaki-shinagawa",
+          lines: cartLines.map(({ item, qty }) => ({
+            menuId: item.id,
+            qty,
+          })),
+        }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        ok?: boolean;
+        message?: string;
+        code?: string;
+      };
+
+      if (!res.ok || data.ok === false) {
+        setCheckoutError(
+          typeof data.message === "string" && data.message.length > 0
+            ? data.message
+            : `送信に失敗しました（${res.status}）。`,
+        );
+        return;
+      }
+
+      const newLines: HistoryLine[] = cartLines.map(({ item, qty }) => ({
+        id: crypto.randomUUID(),
+        menuId: item.id,
+        name: item.name,
+        qty,
+        unitPrice: item.price,
+        imageUrl: item.imageUrl,
+      }));
+      setHistory((prev) => [...prev, ...newLines]);
+      setCart({});
+      setPanel(null);
+      setCheckoutError(null);
+      setOrderSuccessMessage("注文を送信し、履歴に反映しました。");
+      window.setTimeout(() => setOrderSuccessMessage(null), 5000);
+    } catch {
+      setCheckoutError(
+        "ネットワークエラーで送信できませんでした。通信状況を確認して再度お試しください。",
+      );
+    } finally {
+      setOrderSubmitting(false);
+    }
   };
 
   return (
@@ -259,6 +301,15 @@ export function GuestOrderApp() {
           {GUEST_STORE_NAME}
         </h1>
       </header>
+
+      {orderSuccessMessage ? (
+        <div
+          role="status"
+          className="border-b border-emerald-300/50 bg-emerald-50 px-4 py-2.5 text-center text-sm font-medium text-emerald-950"
+        >
+          {orderSuccessMessage}
+        </div>
+      ) : null}
 
       <div className="flex-1 px-3 pb-28 pt-3">
         <Tabs
@@ -562,7 +613,7 @@ export function GuestOrderApp() {
               <SheetHeader className="border-b px-4 py-3 text-left">
                 <SheetTitle>注文リスト</SheetTitle>
                 <SheetDescription>
-                  内容を確認のうえ、下の「注文する」で確定すると履歴に反映されます。
+                  内容を確認のうえ、「注文する」でサーバーへ送信すると履歴に反映されます。
                 </SheetDescription>
               </SheetHeader>
               <ScrollArea className="min-h-0 flex-1 px-2">
@@ -654,9 +705,9 @@ export function GuestOrderApp() {
                 ) : null}
                 <Button
                   type="button"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-[14px] bg-red-600 py-6 text-base font-semibold text-white hover:bg-red-700"
-                  disabled={cartLines.length === 0}
-                  onClick={confirmOrder}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-[14px] bg-red-600 py-6 text-base font-semibold text-white hover:bg-red-700 disabled:opacity-60"
+                  disabled={cartLines.length === 0 || orderSubmitting}
+                  onClick={() => void confirmOrder()}
                 >
                   <svg
                     className="size-5 shrink-0 fill-current"
@@ -669,7 +720,7 @@ export function GuestOrderApp() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  注文する
+                  {orderSubmitting ? "送信中…" : "注文する"}
                 </Button>
               </SheetFooter>
             </>

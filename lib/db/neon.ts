@@ -20,6 +20,11 @@ function getSql() {
   return neon(url);
 }
 
+/** サーバー専用。他モジュールから DB 接続を使い回す場合に利用。 */
+export function getNeonSql() {
+  return getSql();
+}
+
 /** サーバー専用。`neon_sample` テーブルからサンプル行を取得する。 */
 export async function fetchNeonSampleRows(): Promise<NeonSampleResult> {
   const sql = getSql();

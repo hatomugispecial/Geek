@@ -10,6 +10,12 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 4. [Vercel](https://vercel.com/) にデプロイする場合は、プロジェクトの **Environment Variables** に `DATABASE_URL` を登録する（Neon の「Connect to Vercel」から連携してもよい）。
 5. ブラウザで [`/neon-sample`](http://localhost:3000/neon-sample) を開き、テーブル内容が表示されれば接続成功です。
 
+### 注文 API（Neon に保存）
+
+1. Neon の SQL Editor で [`db/orders-schema.sql`](./db/orders-schema.sql) を実行し、`orders` と `order_items` を作成する。
+2. 客向け画面 `/Order` の「注文リスト」→「注文する」で **`POST /api/orders`** が呼ばれ、検証済みの内容が DB に保存される。
+3. `DATABASE_URL` が未設定のときは API は 503 を返す。
+
 ## Getting Started
 
 First, run the development server:
