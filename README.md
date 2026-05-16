@@ -19,7 +19,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ### 店舗コンソール（受信注文）
 
 1. `DATABASE_URL` と `orders` / `order_items`（新規は `orders-schema.sql`、旧 DB は `orders-migration-v2-seat-status.sql` と [`db/orders-migration-v3-order-item-status.sql`](./db/orders-migration-v3-order-item-status.sql) を参照）が用意できていること。
-2. [`/store`](http://localhost:3000/store) の「受信注文（Neon）」で一覧取得（`GET /api/store/orders`）。座席をクエリ指定すると `summary` にメニュー別の合計数量・金額（`menus`）と合計金額が含まれる。**料理（明細）ごとの**ステータス変更は `PATCH /api/store/orders/:id/lines/:lineId`。注文ヘッダの `orders.status` は明細から自動集計される。全明細を同じ状態に揃える場合は `PATCH /api/store/orders/:id` も利用できる。
+2. [`/store`](http://localhost:3000/store) の「受信注文（Neon）」で一覧取得（`GET /api/store/orders`）。座席をクエリ指定すると `summary` に取消除く合計金額などが含まれ、画面では明細行ごと（日時・メニュー・個数・小計）のお会計一覧を表示します。**料理（明細）ごとの**ステータス変更は `PATCH /api/store/orders/:id/lines/:lineId`。注文ヘッダの `orders.status` は明細から自動集計される。全明細を同じ状態に揃える場合は `PATCH /api/store/orders/:id` も利用できる。
 3. 既存 DB には [`db/orders-migration-v2-seat-status.sql`](./db/orders-migration-v2-seat-status.sql) で `seat_label` とステータス制約を、[`db/orders-migration-v3-order-item-status.sql`](./db/orders-migration-v3-order-item-status.sql) で `order_items.status` を追加できる。
 
 ## Getting Started

@@ -135,7 +135,7 @@ export async function listOrdersForStore(
           o.status,
           o.created_at
         ORDER BY
-          o.created_at DESC
+          o.created_at ASC
         LIMIT
           100
       `;
@@ -228,7 +228,7 @@ export async function listOrdersForStore(
         o.status,
         o.created_at
       ORDER BY
-        o.created_at DESC
+        o.created_at ASC
       LIMIT
         100
     `;

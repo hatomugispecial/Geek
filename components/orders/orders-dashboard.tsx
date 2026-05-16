@@ -68,14 +68,14 @@ export function OrdersDashboard() {
       <Sidebar collapsible="icon" variant="sidebar">
         <SidebarHeader className="border-b border-sidebar-border">
           <div className="flex items-center gap-2 px-2 py-1">
-            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-sidebar-border bg-sidebar-accent text-xs font-bold tracking-wide text-sidebar-accent-foreground">
+            <div className="flex size-8 shrink-0 items-center justify-center rounded-md border border-sidebar-border bg-sidebar-accent text-xs font-bold tracking-wide text-sidebar-accent-foreground sm:size-9 sm:text-sm">
               OD
             </div>
             <div className="min-w-0 flex-1 group-data-[collapsible=icon]:hidden">
-              <p className="truncate text-xs font-semibold leading-tight">
+              <p className="truncate text-sm font-semibold leading-tight">
                 OSAKI ダイニング
               </p>
-              <p className="truncate text-[10px] text-muted-foreground">
+              <p className="truncate text-xs text-muted-foreground">
                 注文オペレーション
               </p>
             </div>
@@ -83,7 +83,7 @@ export function OrdersDashboard() {
         </SidebarHeader>
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>メニュー</SidebarGroupLabel>
+            <SidebarGroupLabel className="text-sm">メニュー</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 <SidebarMenuItem>
@@ -93,7 +93,7 @@ export function OrdersDashboard() {
                     render={<Link href="/store" />}
                   >
                     <LayoutDashboard />
-                    <span>ダッシュボード</span>
+                    <span className="text-sm">ダッシュボード</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -102,31 +102,31 @@ export function OrdersDashboard() {
                     render={<Link href="/Order" />}
                   >
                     <Smartphone />
-                    <span>お客様注文</span>
+                    <span className="text-sm">お客様注文</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton tooltip="注文一覧">
                     <ClipboardList />
-                    <span>注文一覧</span>
+                    <span className="text-sm">注文一覧</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton tooltip="店舗マスタ">
                     <Store />
-                    <span>店舗マスタ</span>
+                    <span className="text-sm">店舗マスタ</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton tooltip="ブランド">
                     <Tags />
-                    <span>ブランド</span>
+                    <span className="text-sm">ブランド</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
                   <SidebarMenuButton tooltip="設定">
                     <Settings />
-                    <span>設定</span>
+                    <span className="text-sm">設定</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               </SidebarMenu>
@@ -134,7 +134,7 @@ export function OrdersDashboard() {
           </SidebarGroup>
         </SidebarContent>
         <SidebarFooter className="border-t border-sidebar-border">
-          <div className="px-2 py-2 text-[10px] leading-snug text-muted-foreground group-data-[collapsible=icon]:hidden">
+          <div className="px-2 py-2 text-xs leading-snug text-muted-foreground group-data-[collapsible=icon]:hidden sm:text-sm">
             <p className="flex items-start gap-1">
               <MapPin className="mt-0.5 size-3 shrink-0" aria-hidden />
               <span>{COMPANY.address}</span>
@@ -144,7 +144,7 @@ export function OrdersDashboard() {
         <SidebarRail />
       </Sidebar>
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
+        <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4 text-sm sm:text-base">
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-6" />
           <Breadcrumb>
@@ -160,9 +160,9 @@ export function OrdersDashboard() {
           </Breadcrumb>
           <div className="ml-auto flex items-center gap-2">
             <DropdownMenu>
-              <DropdownMenuTrigger className="flex h-9 min-w-[44px] items-center gap-2 rounded-md px-2 text-sm font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
-                <Avatar className="size-7">
-                  <AvatarFallback className="text-xs">運</AvatarFallback>
+              <DropdownMenuTrigger className="flex h-9 min-w-[44px] items-center gap-2 rounded-md px-2 text-base font-medium outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring sm:h-10">
+                <Avatar className="size-7 sm:size-8">
+                  <AvatarFallback className="text-sm">運</AvatarFallback>
                 </Avatar>
                 <span className="hidden sm:inline">運用 太郎</span>
                 <ChevronDown className="size-4 opacity-60" aria-hidden />
@@ -178,26 +178,29 @@ export function OrdersDashboard() {
             </DropdownMenu>
           </div>
         </header>
-        <div className="flex flex-1 flex-col gap-6 p-4 md:p-6">
+        <div className="flex flex-1 flex-col gap-6 p-4 text-base md:p-6">
           <div className="space-y-2">
-            <h2 className="text-lg font-semibold tracking-tight">受信注文（Neon）</h2>
-            <p className="max-w-prose text-sm text-muted-foreground">
-              客向け <code className="rounded bg-muted px-1">/Order</code> から送信された注文を一覧し、ステータスを更新できます。座席番号でメニュー別の数量・金額と合計を確認できます。
+            <h2 className="text-xl font-semibold tracking-tight md:text-2xl">
+              受信注文（Neon）
+            </h2>
+            <p className="max-w-prose text-base leading-relaxed text-muted-foreground">
+              客向け <code className="rounded bg-muted px-1.5 py-0.5 text-sm">/Order</code>{" "}
+              から送信された注文を一覧し、ステータスを更新できます。座席番号でお会計用の明細（行ごと）と合計を確認できます。
             </p>
           </div>
           <StoreOrdersReception />
 
           <Card className="shadow-none ring-1 ring-border">
             <CardHeader>
-              <CardTitle className="text-base">店舗メモ（UI サンプル）</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg md:text-xl">店舗メモ（UI サンプル）</CardTitle>
+              <CardDescription className="text-base">
                 Textarea・Switch・ボタン・セパレーターの使用例です。
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-4 text-base">
               <Textarea
                 placeholder="例：品川シーサイド店のピーク帯は12時前後。厨房ライン2本体制を推奨"
-                className="min-h-[96px] min-w-[min(100%,320px)] resize-y"
+                className="min-h-[96px] min-w-[min(100%,320px)] resize-y text-base"
               />
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="flex items-center gap-3">
@@ -206,7 +209,7 @@ export function OrdersDashboard() {
                     onCheckedChange={setKitchenNotify}
                     id="kitchen-switch"
                   />
-                  <Label htmlFor="kitchen-switch" className="text-sm font-normal">
+                  <Label htmlFor="kitchen-switch" className="text-base font-normal">
                     厨房ダッシュボードに同時表示
                   </Label>
                 </div>

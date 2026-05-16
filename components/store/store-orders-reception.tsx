@@ -136,19 +136,54 @@ export function StoreOrdersReception() {
   }, [orders, tab]);
 
   const compactRows = React.useMemo(() => {
+    const sortedOrders = [...filteredOrders].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
     const rows: { order: NeonOrdersRow; line: NeonOrdersLine }[] = [];
-    for (const order of filteredOrders) {
+    for (const order of sortedOrders) {
       for (const line of order.lines) {
         rows.push({ order, line });
       }
     }
-    rows.sort((a, b) => {
-      const ta = new Date(a.order.created_at).getTime();
-      const tb = new Date(b.order.created_at).getTime();
-      return tb - ta;
-    });
     return rows;
   }, [filteredOrders]);
+
+  /** 座席集計時: 当該座席の注文を注文日時の古い順 */
+  const seatOrdersChronological = React.useMemo(() => {
+    if (!summary) return [];
+    return [...orders].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
+    );
+  }, [summary, orders]);
+
+  /** 会計用: 取消以外の注文を時系列で、明細行ごと（まとめず） */
+  const seatCheckoutLineRows = React.useMemo(() => {
+    if (!summary) return [];
+    const rows: {
+      key: string;
+      createdAt: string;
+      name: string;
+      qty: number;
+      subtotalYen: number;
+    }[] = [];
+    for (const o of seatOrdersChronological) {
+      if (normalizeLegacyStatus(o.status) === "cancelled") continue;
+      for (const line of o.lines) {
+        const lid =
+          line.id !== undefined && line.id !== null ? String(line.id) : "";
+        rows.push({
+          key: lid ? `${o.id}-${lid}` : `${o.id}-${line.menu_id}-${line.name}`,
+          createdAt: o.created_at,
+          name: line.name,
+          qty: line.qty,
+          subtotalYen: line.qty * line.unit_price_yen,
+        });
+      }
+    }
+    return rows;
+  }, [summary, seatOrdersChronological]);
 
   const todayCount = React.useMemo(
     () => orders.filter((o) => isTodayJst(o.created_at)).length,
@@ -200,17 +235,17 @@ export function StoreOrdersReception() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-lg border border-border bg-card p-3 ring-1 ring-border">
-        <h2 className="text-sm font-semibold tracking-tight text-foreground">
+    <div className="space-y-4 text-sm">
+      <div className="rounded-lg border border-border bg-card p-3 ring-1 ring-border sm:p-4">
+        <h2 className="text-base font-semibold tracking-tight text-foreground">
           座席で会計集計
         </h2>
-        <p className="mt-0.5 text-[11px] leading-snug text-muted-foreground">
+        <p className="mt-1 text-sm leading-snug text-muted-foreground">
           取消済み注文は集計から除外します。座席は完全一致（前後の空白は無視）で照合します。
         </p>
-        <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-end">
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end">
           <div className="grid w-full min-w-0 flex-1 gap-2">
-            <Label htmlFor="store-seat-filter" className="text-xs">
+            <Label htmlFor="store-seat-filter" className="text-sm">
               座席番号
             </Label>
             <Input
@@ -245,54 +280,73 @@ export function StoreOrdersReception() {
           </div>
         </div>
         {summary ? (
-          <div className="mt-3 space-y-2">
-            <dl className="grid gap-2 border border-border bg-muted/20 p-2 text-xs sm:grid-cols-2">
-              <div>
-                <dt className="text-[10px] text-muted-foreground">注文件数（取消除く）</dt>
-                <dd className="text-base font-semibold tabular-nums leading-tight">
-                  {summary.orderCount}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-[10px] text-muted-foreground">合計金額（取消除く）</dt>
-                <dd className="text-base font-semibold tabular-nums leading-tight text-orange-950">
-                  ¥{summary.totalYen.toLocaleString("ja-JP")}
-                </dd>
-              </div>
-            </dl>
-            {summary.menus.length > 0 ? (
-              <div className="overflow-x-auto rounded-md border border-border">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead className="h-8 px-2 py-1 text-xs">メニュー</TableHead>
-                      <TableHead className="h-8 px-2 py-1 text-right text-xs tabular-nums">
-                        合計数量
-                      </TableHead>
-                      <TableHead className="h-8 px-2 py-1 text-right text-xs tabular-nums">
-                        金額（円）
-                      </TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {summary.menus.map((m) => (
-                      <TableRow key={m.menu_id} className="hover:bg-muted/40">
-                        <TableCell className="max-w-[200px] truncate px-2 py-1.5 text-xs font-medium">
-                          {m.name}
-                        </TableCell>
-                        <TableCell className="px-2 py-1.5 text-right text-xs tabular-nums">
-                          {m.total_qty}
-                        </TableCell>
-                        <TableCell className="px-2 py-1.5 text-right text-xs font-semibold tabular-nums text-orange-950">
-                          ¥{m.line_amount_yen.toLocaleString("ja-JP")}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
+          <div className="mt-4 space-y-3">
+            <p className="text-sm text-muted-foreground">
+              取消を除く注文{" "}
+              <strong className="font-semibold text-foreground tabular-nums">
+                {summary.orderCount}
+              </strong>{" "}
+              件
+            </p>
+            {seatCheckoutLineRows.length > 0 ? (
+              <>
+                <div>
+                  <p className="text-sm font-semibold text-foreground">
+                    お会計明細（注文ごとの行・古い順）
+                  </p>
+                  <div className="mt-2 max-h-[min(48dvh,420px)] overflow-auto rounded-md border border-border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="h-9 px-2 py-2 text-xs sm:text-sm">
+                            日時
+                          </TableHead>
+                          <TableHead className="h-9 px-2 py-2 text-xs sm:text-sm">
+                            メニュー名
+                          </TableHead>
+                          <TableHead className="h-9 px-2 py-2 text-right text-xs tabular-nums sm:text-sm">
+                            個数
+                          </TableHead>
+                          <TableHead className="h-9 px-2 py-2 text-right text-xs tabular-nums sm:text-sm">
+                            小計（円）
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {seatCheckoutLineRows.map((r) => (
+                          <TableRow key={r.key} className="hover:bg-muted/40">
+                            <TableCell className="whitespace-nowrap px-2 py-2 text-xs tabular-nums text-muted-foreground sm:text-sm">
+                              {formatJaCompact(r.createdAt)}
+                            </TableCell>
+                            <TableCell
+                              className="max-w-[min(52vw,14rem)] truncate px-2 py-2 text-xs font-medium sm:max-w-[18rem] sm:text-sm"
+                              title={r.name}
+                            >
+                              {r.name}
+                            </TableCell>
+                            <TableCell className="px-2 py-2 text-right text-xs tabular-nums font-medium sm:text-sm">
+                              {r.qty}
+                            </TableCell>
+                            <TableCell className="px-2 py-2 text-right text-xs font-semibold tabular-nums text-orange-950 sm:text-sm">
+                              ¥{r.subtotalYen.toLocaleString("ja-JP")}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+                <div className="rounded-md border border-orange-200/60 bg-orange-50/50 px-4 py-5 text-center ring-1 ring-orange-100/50">
+                  <p className="text-sm font-medium text-muted-foreground">
+                    最終金額（取消除く・税込想定）
+                  </p>
+                  <p className="mt-2 text-2xl font-bold tabular-nums tracking-tight text-orange-950 sm:text-3xl md:text-4xl">
+                    ¥{summary.totalYen.toLocaleString("ja-JP")}
+                  </p>
+                </div>
+              </>
             ) : (
-              <p className="text-xs leading-relaxed text-muted-foreground">
+              <p className="text-sm leading-relaxed text-muted-foreground">
                 この座席で、取消を除く注文明細がまだありません。
               </p>
             )}
@@ -300,7 +354,7 @@ export function StoreOrdersReception() {
         ) : null}
       </div>
 
-      <div className="rounded-lg border border-border bg-card p-2 ring-1 ring-border sm:p-3">
+      <div className="rounded-lg border border-border bg-card p-3 ring-1 ring-border sm:p-4">
         <Tabs
         value={tab}
         onValueChange={(v) =>
@@ -309,18 +363,18 @@ export function StoreOrdersReception() {
         className="w-full gap-0"
       >
         <div className="flex flex-wrap items-end justify-between gap-2 border-b border-border pb-2">
-          <TabsList className="h-8 gap-0.5 p-0.5">
-            <TabsTrigger value="today" className="px-2.5 py-1 text-xs">
+          <TabsList className="h-9 gap-0.5 p-0.5">
+            <TabsTrigger value="today" className="px-3 py-1.5 text-sm">
               本日
             </TabsTrigger>
-            <TabsTrigger value="pending" className="px-2.5 py-1 text-xs">
+            <TabsTrigger value="pending" className="px-3 py-1.5 text-sm">
               未完了
             </TabsTrigger>
-            <TabsTrigger value="all" className="px-2.5 py-1 text-xs">
+            <TabsTrigger value="all" className="px-3 py-1.5 text-sm">
               すべて
             </TabsTrigger>
           </TabsList>
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground sm:text-sm">
             <span>
               明細{" "}
               <strong className="font-semibold text-foreground tabular-nums">
@@ -355,41 +409,41 @@ export function StoreOrdersReception() {
           {error ? (
             <p
               role="alert"
-              className="rounded-md border border-red-300/60 bg-red-50/90 p-3 text-sm text-red-950"
+              className="rounded-md border border-red-300/60 bg-red-50/90 p-3 text-sm text-red-950 sm:text-base"
             >
               {error}
             </p>
           ) : null}
           {loading ? (
-            <p className="py-6 text-center text-xs text-muted-foreground">
+            <p className="py-6 text-center text-sm text-muted-foreground sm:text-base">
               読み込み中…
             </p>
           ) : filteredOrders.length === 0 ? (
-            <p className="py-8 text-center text-xs text-muted-foreground">
+            <p className="py-8 text-center text-sm text-muted-foreground sm:text-base">
               該当する注文がありません
             </p>
           ) : compactRows.length === 0 ? (
-            <p className="py-8 text-center text-xs text-muted-foreground">
+            <p className="py-8 text-center text-sm text-muted-foreground sm:text-base">
               表示中の注文に明細がありません
             </p>
           ) : (
             <div className="max-h-[min(65dvh,560px)] overflow-auto rounded-md border border-border">
-              <table className="w-full border-collapse text-left text-xs">
+              <table className="w-full border-collapse text-left text-sm">
                 <TableHeader className="sticky top-0 z-10 border-b border-border bg-muted/95 backdrop-blur-sm [&_tr]:border-b-0 [&_tr:hover]:bg-transparent">
                   <TableRow className="border-0 hover:bg-transparent">
-                    <TableHead className="h-8 whitespace-nowrap px-2 py-1.5 text-[11px] font-semibold">
+                    <TableHead className="h-9 whitespace-nowrap px-2 py-2 text-xs font-semibold sm:text-sm">
                       日時
                     </TableHead>
-                    <TableHead className="h-8 whitespace-nowrap px-2 py-1.5 text-[11px] font-semibold">
+                    <TableHead className="h-9 whitespace-nowrap px-2 py-2 text-xs font-semibold sm:text-sm">
                       座席
                     </TableHead>
-                    <TableHead className="h-8 min-w-0 px-2 py-1.5 text-[11px] font-semibold">
+                    <TableHead className="h-9 min-w-0 px-2 py-2 text-xs font-semibold sm:text-sm">
                       料理名
                     </TableHead>
-                    <TableHead className="h-8 whitespace-nowrap px-2 py-1.5 text-right text-[11px] font-semibold tabular-nums">
+                    <TableHead className="h-9 whitespace-nowrap px-2 py-2 text-right text-xs font-semibold tabular-nums sm:text-sm">
                       個数
                     </TableHead>
-                    <TableHead className="h-8 whitespace-nowrap px-2 py-1.5 text-[11px] font-semibold">
+                    <TableHead className="h-9 whitespace-nowrap px-2 py-2 text-xs font-semibold sm:text-sm">
                       ステータス
                     </TableHead>
                   </TableRow>
@@ -423,25 +477,25 @@ export function StoreOrdersReception() {
                           muted && "bg-muted/20 text-muted-foreground",
                         )}
                       >
-                        <TableCell className="whitespace-nowrap px-2 py-1.5 tabular-nums text-[11px] text-muted-foreground">
+                        <TableCell className="whitespace-nowrap px-2 py-2 tabular-nums text-xs text-muted-foreground sm:text-sm">
                           {formatJaCompact(row.created_at)}
                         </TableCell>
                         <TableCell
-                          className="max-w-[5.5rem] truncate px-2 py-1.5 font-medium"
+                          className="max-w-[5.5rem] truncate px-2 py-2 text-xs font-medium sm:text-sm"
                           title={seatDisp}
                         >
                           {seatDisp}
                         </TableCell>
                         <TableCell
-                          className="max-w-[min(42vw,11rem)] truncate px-2 py-1.5 font-medium"
+                          className="max-w-[min(42vw,11rem)] truncate px-2 py-2 text-xs font-medium sm:max-w-[14rem] sm:text-sm"
                           title={line.name}
                         >
                           {line.name}
                         </TableCell>
-                        <TableCell className="whitespace-nowrap px-2 py-1.5 text-right tabular-nums font-medium">
+                        <TableCell className="whitespace-nowrap px-2 py-2 text-right text-xs tabular-nums font-medium sm:text-sm">
                           {line.qty}
                         </TableCell>
-                        <TableCell className="min-w-[7.5rem] px-1 py-1">
+                        <TableCell className="min-w-[7.5rem] px-1 py-1.5">
                           {hasNumericId ? (
                             <Select
                               value={lineSt}
@@ -452,7 +506,7 @@ export function StoreOrdersReception() {
                                 }
                               }}
                             >
-                              <SelectTrigger className="h-8 w-full min-w-[6.75rem] gap-1 text-xs shadow-none ring-1 ring-border">
+                              <SelectTrigger className="h-9 w-full min-w-[6.75rem] gap-1 text-sm shadow-none ring-1 ring-border">
                                 <SelectValue placeholder={lineStatusJa} />
                               </SelectTrigger>
                               <SelectContent className="shadow-none ring-1 ring-border">
@@ -464,7 +518,7 @@ export function StoreOrdersReception() {
                               </SelectContent>
                             </Select>
                           ) : (
-                            <span className="px-1 text-[11px] text-muted-foreground">
+                            <span className="px-1 text-xs text-muted-foreground sm:text-sm">
                               {lineStatusJa}
                             </span>
                           )}
