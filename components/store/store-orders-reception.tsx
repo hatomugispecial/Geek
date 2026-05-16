@@ -27,7 +27,15 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { StoreStaffAuthRequired } from "@/components/store/store-staff-auth-required";
 import { cn } from "@/lib/utils";
+
+function isStaffUnauthorized(
+  res: Response,
+  data: { ok?: boolean; code?: string },
+): boolean {
+  return res.status === 401 || data.code === "unauthorized";
+}
 
 type SeatMenuAggregateRow = {
   menu_id: string;
@@ -70,6 +78,7 @@ function isPendingFlow(status: string) {
 }
 
 export function StoreOrdersReception() {
+  const [authRequired, setAuthRequired] = React.useState(false);
   const [tab, setTab] = React.useState<"today" | "pending" | "all">("today");
   const [orders, setOrders] = React.useState<NeonOrdersRow[]>([]);
   const [seatInput, setSeatInput] = React.useState("");
@@ -94,11 +103,19 @@ export function StoreOrdersReception() {
       });
       const data = (await res.json()) as {
         ok?: boolean;
+        code?: string;
         orders?: NeonOrdersRow[];
         summary?: (Omit<SeatSummary, "menus"> & { menus?: SeatMenuAggregateRow[] }) | null;
         seatFilter?: string | null;
         message?: string;
       };
+      if (isStaffUnauthorized(res, data)) {
+        setAuthRequired(true);
+        setOrders([]);
+        setSummary(null);
+        setActiveSeatFilter(null);
+        return;
+      }
       if (!res.ok || data.ok === false) {
         throw new Error(data.message ?? `取得に失敗しました（${res.status}）`);
       }
@@ -225,7 +242,12 @@ export function StoreOrdersReception() {
       );
       const data = (await res.json().catch(() => ({}))) as {
         message?: string;
+        code?: string;
       };
+      if (isStaffUnauthorized(res, data)) {
+        setAuthRequired(true);
+        return;
+      }
       if (!res.ok) {
         throw new Error(data.message ?? `更新に失敗（${res.status}）`);
       }
@@ -239,6 +261,10 @@ export function StoreOrdersReception() {
 
   return (
     <div className="space-y-4 text-sm">
+      {authRequired ? (
+        <StoreStaffAuthRequired />
+      ) : (
+        <>
       <div className="rounded-lg border border-border bg-card p-3 ring-1 ring-border sm:p-4">
         <h2 className="text-base font-semibold tracking-tight text-foreground">
           座席で会計集計
@@ -536,6 +562,8 @@ export function StoreOrdersReception() {
         </div>
       </Tabs>
       </div>
+        </>
+      )}
     </div>
   );
 }
