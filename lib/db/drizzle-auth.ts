@@ -1,14 +1,15 @@
 import { neon } from "@neondatabase/serverless";
 import { drizzle } from "drizzle-orm/neon-http";
 import { isRelaxedEnvBuildPhase } from "@/lib/env-build";
+import { resolveDatabaseUrlFromEnv } from "@/lib/db/resolve-database-url";
 import * as authSchema from "./auth-schema";
 
-const url = process.env.DATABASE_URL?.trim();
+const url = resolveDatabaseUrlFromEnv();
 const relaxed = isRelaxedEnvBuildPhase();
 
 if (!url && !relaxed) {
   throw new Error(
-    "DATABASE_URL が未設定です。Better Auth は Neon（PostgreSQL）に接続します。",
+    "PostgreSQL 接続用の環境変数が見つかりません。DATABASE_URL（または Vercel / Neon が注入する POSTGRES_URL 等）を設定してください。",
   );
 }
 

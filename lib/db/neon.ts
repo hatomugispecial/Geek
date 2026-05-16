@@ -1,4 +1,5 @@
 import { neon } from "@neondatabase/serverless";
+import { resolveDatabaseUrlFromEnv } from "@/lib/db/resolve-database-url";
 
 export type NeonOrdersLine = {
   id?: string | number;
@@ -30,8 +31,8 @@ export type NeonOrdersResult =
     };
 
 function getSql() {
-  const url = process.env.DATABASE_URL;
-  if (!url?.trim()) return null;
+  const url = resolveDatabaseUrlFromEnv();
+  if (!url) return null;
   return neon(url);
 }
 

@@ -42,11 +42,14 @@ function resolveBetterAuthSecret(): string {
 }
 
 function resolveBetterAuthBaseURL(): string {
-  const raw = process.env.BETTER_AUTH_URL?.trim();
+  const raw = process.env.BETTER_AUTH_URL?.trim().replace(/\/+$/, "");
   if (raw) return raw;
   const vercel = process.env.VERCEL_URL?.trim();
   if (vercel && isProd && !relaxedBuild) {
-    const withScheme = vercel.startsWith("http") ? vercel : `https://${vercel}`;
+    const withScheme = (vercel.startsWith("http") ? vercel : `https://${vercel}`).replace(
+      /\/+$/,
+      "",
+    );
     return withScheme;
   }
   if (isProd && !relaxedBuild) {

@@ -39,7 +39,7 @@ export function RegisterForm() {
         const hint =
           code === "PASSWORD_TOO_SHORT"
             ? "パスワードを長くしてください。"
-            : "Neon で db/better-auth-schema.sql を実行済みか、.env.local の DATABASE_URL / BETTER_AUTH_URL を確認してください。";
+            : "Neon で db/better-auth-schema.sql を実行済みか、Vercel Production の DATABASE_URL（または POSTGRES_URL）・BETTER_AUTH_URL・BETTER_AUTH_SECRET を確認してください。";
         setMessage(
           `${error.message ?? "登録に失敗しました。"}${detail}${code ? ` [${code}]` : ""} ${hint}`,
         );
