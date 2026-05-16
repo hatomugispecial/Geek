@@ -65,6 +65,8 @@ export type MenuItem = {
   price: number;
   /** メニュー写真（メニュー名に対応） */
   imageUrl: string;
+  /** true のときカートへ追加不可（デモ用フラグ） */
+  soldOut?: boolean;
 };
 
 export const MENU_CATEGORY_ORDER: { id: MenuCategoryId; label: string }[] = [
@@ -85,13 +87,19 @@ export const MENU_TABS: { id: MenuTabId; label: string }[] = [
 
 const MENU_ITEMS_BASE: Omit<MenuItem, "imageUrl">[] = [
   { id: "m1", categoryId: "otsumami", name: "枝豆", price: 380 },
-  { id: "m2", categoryId: "otsumami", name: "冷奴", price: 420 },
+  { id: "m2", categoryId: "otsumami", name: "冷奴", price: 420, soldOut: true },
   { id: "m3", categoryId: "okazu", name: "唐揚げ定食", price: 1180 },
   { id: "m4", categoryId: "okazu", name: "焼魚定食", price: 1280 },
   { id: "m5", categoryId: "salad", name: "シーザーサラダ", price: 680 },
   { id: "m6", categoryId: "salad", name: "大崎野菜のサラダ", price: 720 },
   { id: "m7", categoryId: "cocktail", name: "大崎サワー", price: 580 },
-  { id: "m8", categoryId: "cocktail", name: "季節のフルーツカクテル", price: 720 },
+  {
+    id: "m8",
+    categoryId: "cocktail",
+    name: "季節のフルーツカクテル",
+    price: 720,
+    soldOut: true,
+  },
   { id: "m9", categoryId: "nihonshu", name: "純米吟醸（一合）", price: 780 },
   { id: "m10", categoryId: "nihonshu", name: "本醸造（一合）", price: 580 },
   { id: "m11", categoryId: "whiskey", name: "ハイボール", price: 480 },

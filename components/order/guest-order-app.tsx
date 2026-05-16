@@ -41,7 +41,7 @@ import {
 } from "@/lib/order/menu-data";
 import { cn } from "@/lib/utils";
 
-type BottomPanel = "history" | "cart" | "checkout" | null;
+type BottomPanel = "history" | "orderList" | null;
 
 type HistoryLine = {
   id: string;
@@ -52,7 +52,14 @@ type HistoryLine = {
   imageUrl: string;
 };
 
-const QTY_OPTIONS = ["0", "1", "2", "3", "4"] as const;
+/** メニュー詳細ダイアログから一度に追加する数量（数量の変更は「注文リスト」の ± で行う） */
+const DIALOG_QTY_OPTIONS = ["1", "2", "3", "4"] as const;
+
+const SPLIT_PEOPLE_OPTIONS = Array.from({ length: 20 }, (_, i) =>
+  String(i + 1),
+) as string[];
+
+const MAX_QTY_PER_ITEM = 99;
 
 function itemsByCategory(categoryId: MenuCategoryId): MenuItem[] {
   return MENU_ITEMS.filter((i) => i.categoryId === categoryId);
@@ -80,6 +87,7 @@ function MenuItemCard({
   item: MenuItem;
   onSelect: (item: MenuItem) => void;
 }) {
+  const soldOut = Boolean(item.soldOut);
   return (
     <li>
       <button
@@ -88,15 +96,24 @@ function MenuItemCard({
         className={cn(
           "group flex w-full flex-col overflow-hidden rounded-xl border border-orange-200/45 bg-[#fffbf7] text-left ring-1 ring-orange-100/40 transition-colors",
           "min-h-[44px] hover:border-orange-300/60 hover:bg-[#fff8f0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600/40",
+          soldOut && "opacity-[0.88]",
         )}
       >
         <div className="relative aspect-square w-full overflow-hidden bg-orange-50/40">
+          {soldOut ? (
+            <span className="absolute left-1.5 top-1.5 z-[1] border border-stone-600/35 bg-[#f4efe6]/95 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide text-stone-800">
+              品切れ
+            </span>
+          ) : null}
           <Image
             src={item.imageUrl}
             alt={item.name}
             fill
             sizes="(max-width: 430px) 45vw, 200px"
-            className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out group-hover:scale-[1.03]"
+            className={cn(
+              "object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out group-hover:scale-[1.03]",
+              soldOut && "brightness-[0.92]",
+            )}
             loading="lazy"
           />
         </div>
@@ -121,12 +138,19 @@ export function GuestOrderApp() {
   const [activeItem, setActiveItem] = React.useState<MenuItem | null>(null);
   const [dialogQty, setDialogQty] = React.useState("1");
   const [panel, setPanel] = React.useState<BottomPanel>(null);
+  const [splitPeopleValue, setSplitPeopleValue] = React.useState("2");
+  const [cartAddError, setCartAddError] = React.useState<string | null>(null);
+  const [checkoutError, setCheckoutError] = React.useState<string | null>(null);
+
+  const cartRef = React.useRef(cart);
+  cartRef.current = cart;
 
   React.useEffect(() => {
     if (activeItem) setDialogQty("1");
   }, [activeItem]);
 
   const openItem = (item: MenuItem) => {
+    setCartAddError(null);
     setActiveItem(item);
     setDialogOpen(true);
   };
@@ -134,18 +158,41 @@ export function GuestOrderApp() {
   const addFromDialog = () => {
     if (!activeItem) return;
     const n = Number.parseInt(dialogQty, 10);
-    if (Number.isNaN(n) || n < 0 || n > 4) return;
-    setCart((prev) => {
-      const next = { ...prev };
-      if (n === 0) {
-        delete next[activeItem.id];
-        return next;
-      }
-      next[activeItem.id] = (next[activeItem.id] ?? 0) + n;
-      return next;
-    });
+    if (Number.isNaN(n) || n < 1 || n > 4) return;
+    if (activeItem.soldOut) {
+      return;
+    }
+    setCartAddError(null);
+    const cur = cartRef.current[activeItem.id] ?? 0;
+    if (cur + n > MAX_QTY_PER_ITEM) {
+      setCartAddError(
+        `1品目あたり注文リストに入れられるのは最大${MAX_QTY_PER_ITEM}個までです。`,
+      );
+      return;
+    }
+    setCart((prev) => ({
+      ...prev,
+      [activeItem.id]: (prev[activeItem.id] ?? 0) + n,
+    }));
     setDialogOpen(false);
     setActiveItem(null);
+  };
+
+  const adjustCartQty = (menuId: string, delta: -1 | 1) => {
+    setCart((prev) => {
+      const item = MENU_ITEMS.find((m) => m.id === menuId);
+      if (!item) return prev;
+      if (delta === 1 && item.soldOut) return prev;
+      const current = prev[menuId] ?? 0;
+      const nextQty = current + delta;
+      if (nextQty <= 0) {
+        const next = { ...prev };
+        delete next[menuId];
+        return next;
+      }
+      if (nextQty > MAX_QTY_PER_ITEM) return prev;
+      return { ...prev, [menuId]: nextQty };
+    });
   };
 
   const cartLines = React.useMemo(() => {
@@ -166,8 +213,28 @@ export function GuestOrderApp() {
     return history.reduce((s, h) => s + h.unitPrice * h.qty, 0);
   }, [history]);
 
+  const splitPeopleParsed = React.useMemo(() => {
+    const n = Number.parseInt(splitPeopleValue, 10);
+    if (!Number.isFinite(n) || n < 1 || n > SPLIT_PEOPLE_OPTIONS.length)
+      return null;
+    return n;
+  }, [splitPeopleValue]);
+
+  const splitPerPerson =
+    historyTotal > 0 && splitPeopleParsed !== null
+      ? Math.ceil(historyTotal / splitPeopleParsed)
+      : null;
+
   const confirmOrder = () => {
     if (cartLines.length === 0) return;
+    setCheckoutError(null);
+    const soldOutLines = cartLines.filter(({ item }) => item.soldOut);
+    if (soldOutLines.length > 0) {
+      setCheckoutError(
+        `品切れのメニューが注文リストに含まれているため確定できません（${soldOutLines.map((l) => l.item.name).join("、")}）。`,
+      );
+      return;
+    }
     const newLines: HistoryLine[] = cartLines.map(({ item, qty }) => ({
       id: crypto.randomUUID(),
       menuId: item.id,
@@ -179,6 +246,7 @@ export function GuestOrderApp() {
     setHistory((prev) => [...prev, ...newLines]);
     setCart({});
     setPanel(null);
+    setCheckoutError(null);
   };
 
   return (
@@ -278,7 +346,10 @@ export function GuestOrderApp() {
         open={dialogOpen}
         onOpenChange={(open) => {
           setDialogOpen(open);
-          if (!open) setActiveItem(null);
+          if (!open) {
+            setActiveItem(null);
+            setCartAddError(null);
+          }
         }}
       >
         <DialogContent
@@ -310,15 +381,34 @@ export function GuestOrderApp() {
                 />
               </div>
               <div className="grid gap-2 py-2">
+                {activeItem.soldOut ? (
+                  <p className="rounded-md border border-stone-400/40 bg-stone-100/80 p-2.5 text-xs leading-relaxed text-stone-800">
+                    このメニューは品切れです。「追加」では注文リストに入りません。すでに注文リストに入っている場合は、「注文リスト」の「−」で数量を減らしてください。
+                  </p>
+                ) : null}
+                {cartAddError ? (
+                  <p
+                    role="alert"
+                    className="rounded-md border border-red-300/60 bg-red-50/90 p-2.5 text-xs leading-relaxed text-red-950"
+                  >
+                    {cartAddError}
+                  </p>
+                ) : null}
                 <Label htmlFor="qty-select" className="text-xs">
-                  数量（0〜4）
+                  数量（1〜4）
                 </Label>
-                <Select value={dialogQty} onValueChange={(v) => setDialogQty(v ?? "1")}>
+                <Select
+                  value={dialogQty}
+                  onValueChange={(v) => {
+                    setDialogQty(v ?? "1");
+                    setCartAddError(null);
+                  }}
+                >
                   <SelectTrigger id="qty-select" className="w-full shadow-none ring-1 ring-border">
                     <SelectValue placeholder="数量" />
                   </SelectTrigger>
                   <SelectContent className="shadow-none ring-1 ring-border">
-                    {QTY_OPTIONS.map((q) => (
+                    {DIALOG_QTY_OPTIONS.map((q) => (
                       <SelectItem key={q} value={q}>
                         {q}
                       </SelectItem>
@@ -326,7 +416,7 @@ export function GuestOrderApp() {
                   </SelectContent>
                 </Select>
                 <p className="text-[11px] text-muted-foreground">
-                  0 を選んで「追加」するとカートから削除します。
+                  注文リスト内の数量は「−」「＋」で変更できます。
                 </p>
               </div>
               <DialogFooter className="flex-row justify-end gap-2 sm:justify-end">
@@ -340,6 +430,7 @@ export function GuestOrderApp() {
                 <Button
                   type="button"
                   className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-orange-600 text-white hover:bg-orange-700"
+                  disabled={Boolean(activeItem.soldOut)}
                   onClick={addFromDialog}
                 >
                   <svg
@@ -412,84 +503,133 @@ export function GuestOrderApp() {
                     ¥{historyTotal.toLocaleString("ja-JP")}
                   </span>
                 </div>
-              </div>
-            </>
-          ) : null}
-
-          {panel === "cart" ? (
-            <>
-              <SheetHeader className="border-b px-4 py-3 text-left">
-                <SheetTitle>現在のカート</SheetTitle>
-                <SheetDescription>
-                  「注文する」から確定すると履歴に反映されます。
-                </SheetDescription>
-              </SheetHeader>
-              <ScrollArea className="min-h-0 flex-1 px-2">
-                <ul className="divide-y px-2">
-                  {cartLines.length === 0 ? (
-                    <li className="py-8 text-center text-sm text-muted-foreground">
-                      カートは空です
-                    </li>
-                  ) : (
-                    cartLines.map(({ item, qty }) => (
-                      <li
-                        key={item.id}
-                        className="flex items-center gap-3 py-3 text-sm"
-                      >
-                        <LineThumb src={item.imageUrl} label={item.name} />
-                        <span className="min-w-0 flex-1 truncate font-medium">
-                          {item.name}
-                        </span>
-                        <span className="shrink-0 tabular-nums text-muted-foreground">
-                          ×{qty}
-                        </span>
-                        <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-950">
-                          ¥{(item.price * qty).toLocaleString("ja-JP")}
-                        </span>
-                      </li>
-                    ))
+                <div
+                  className={cn(
+                    "mt-3 border border-orange-200/50 bg-[#fffbf7] p-3",
+                    history.length === 0 && "pointer-events-none opacity-60",
                   )}
-                </ul>
-              </ScrollArea>
-              <div className="border-t border-orange-200/40 bg-orange-50/60 px-4 py-3">
-                <div className="flex items-center justify-between text-base font-semibold text-stone-900">
-                  <span>小計</span>
-                  <span className="tabular-nums text-orange-950">
-                    ¥{cartSubtotal.toLocaleString("ja-JP")}
-                  </span>
+                >
+                  <Label
+                    htmlFor="split-people"
+                    className="text-xs font-medium text-stone-800"
+                  >
+                    割り勘の人数
+                  </Label>
+                  <div className="mt-2 flex flex-wrap items-end gap-3">
+                    <Select
+                      value={splitPeopleValue}
+                      onValueChange={(v) => setSplitPeopleValue(v ?? "2")}
+                    >
+                      <SelectTrigger
+                        id="split-people"
+                        className="h-10 w-full min-w-[8rem] max-w-[11rem] rounded-[10px] border-orange-200/60 shadow-none ring-1 ring-orange-200/50"
+                        disabled={history.length === 0}
+                        aria-describedby="split-per-amount"
+                      >
+                        <SelectValue placeholder="人数" />
+                      </SelectTrigger>
+                      <SelectContent className="shadow-none ring-1 ring-border">
+                        {SPLIT_PEOPLE_OPTIONS.map((p) => (
+                          <SelectItem key={p} value={p}>
+                            {p}人
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="min-w-0 flex-1 text-sm text-stone-800">
+                      <span className="block text-xs text-stone-600">
+                        1人あたり（総額÷人数・端数切り上げ）
+                      </span>
+                      <span
+                        id="split-per-amount"
+                        className="mt-0.5 block text-base font-semibold tabular-nums text-orange-950"
+                      >
+                        {history.length === 0
+                          ? "—"
+                          : splitPerPerson !== null
+                            ? `¥${splitPerPerson.toLocaleString("ja-JP")}`
+                            : "—"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </>
           ) : null}
 
-          {panel === "checkout" ? (
+          {panel === "orderList" ? (
             <>
               <SheetHeader className="border-b px-4 py-3 text-left">
-                <SheetTitle>注文する</SheetTitle>
+                <SheetTitle>注文リスト</SheetTitle>
                 <SheetDescription>
-                  内容を確認のうえ、注文を確定してください。
+                  内容を確認のうえ、下の「注文する」で確定すると履歴に反映されます。
                 </SheetDescription>
               </SheetHeader>
               <ScrollArea className="min-h-0 flex-1 px-2">
                 <ul className="divide-y px-2">
                   {cartLines.length === 0 ? (
                     <li className="py-8 text-center text-sm text-muted-foreground">
-                      カートに商品がありません
+                      注文リストは空です
                     </li>
                   ) : (
                     cartLines.map(({ item, qty }) => (
                       <li
                         key={item.id}
-                        className="flex items-center gap-3 py-3 text-sm"
+                        className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-x-2 gap-y-1 py-3 text-sm"
                       >
                         <LineThumb src={item.imageUrl} label={item.name} />
-                        <span className="min-w-0 flex-1 truncate font-medium">
+                        <span className="min-w-0 truncate font-medium">
                           {item.name}
                         </span>
-                        <span className="shrink-0 tabular-nums text-muted-foreground">
-                          ×{qty}
-                        </span>
-                        <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-950">
+                        <div
+                          className="flex shrink-0 items-center gap-0.5 justify-self-end rounded-[10px] border border-orange-200/70 bg-orange-50/50 p-0.5"
+                          role="group"
+                          aria-label={`${item.name}の数量`}
+                        >
+                          <button
+                            type="button"
+                            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[8px] text-orange-950 transition-colors hover:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-orange-600/50"
+                            aria-label="1つ減らす"
+                            onClick={() => adjustCartQty(item.id, -1)}
+                          >
+                            <svg
+                              className="size-5 shrink-0"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.25"
+                              strokeLinecap="round"
+                              aria-hidden
+                            >
+                              <path d="M6 12h12" />
+                            </svg>
+                          </button>
+                          <span className="min-w-[2rem] px-1 text-center text-sm font-semibold tabular-nums text-stone-900">
+                            {qty}
+                          </span>
+                          <button
+                            type="button"
+                            className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center rounded-[8px] text-orange-950 transition-colors hover:bg-orange-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-orange-600/50 disabled:pointer-events-none disabled:opacity-35"
+                            aria-label="1つ増やす"
+                            disabled={
+                              Boolean(item.soldOut) || qty >= MAX_QTY_PER_ITEM
+                            }
+                            onClick={() => adjustCartQty(item.id, 1)}
+                          >
+                            <svg
+                              className="size-5 shrink-0"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2.25"
+                              strokeLinecap="round"
+                              aria-hidden
+                            >
+                              <path d="M12 6v12M6 12h12" />
+                            </svg>
+                          </button>
+                        </div>
+                        <span className="col-span-3 justify-self-end text-sm font-semibold tabular-nums text-orange-950">
                           ¥{(item.price * qty).toLocaleString("ja-JP")}
                         </span>
                       </li>
@@ -499,18 +639,37 @@ export function GuestOrderApp() {
               </ScrollArea>
               <SheetFooter className="border-t border-orange-200/40 bg-orange-50/50 px-4 py-3 sm:flex-col">
                 <div className="mb-3 flex w-full items-center justify-between text-base font-semibold text-stone-900">
-                  <span>お支払い予定（参考）</span>
+                  <span>小計</span>
                   <span className="tabular-nums text-orange-950">
                     ¥{cartSubtotal.toLocaleString("ja-JP")}
                   </span>
                 </div>
+                {checkoutError ? (
+                  <p
+                    role="alert"
+                    className="mb-3 rounded-md border border-red-300/60 bg-red-50/90 p-2.5 text-xs leading-relaxed text-red-950"
+                  >
+                    {checkoutError}
+                  </p>
+                ) : null}
                 <Button
                   type="button"
-                  className="w-full rounded-[14px] bg-red-600 py-6 text-base font-semibold text-white hover:bg-red-700"
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-[14px] bg-red-600 py-6 text-base font-semibold text-white hover:bg-red-700"
                   disabled={cartLines.length === 0}
                   onClick={confirmOrder}
                 >
-                  注文を確定
+                  <svg
+                    className="size-5 shrink-0 fill-current"
+                    viewBox="0 0 20 20"
+                    aria-hidden
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M16.704 4.153a.75.75 0 01.143 1.052l-7 9.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 6.339-8.626a.75.75 0 011.051-.143z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  注文する
                 </Button>
               </SheetFooter>
             </>
@@ -522,7 +681,7 @@ export function GuestOrderApp() {
         className="fixed bottom-0 left-1/2 z-30 flex w-full max-w-[430px] -translate-x-1/2 border-t border-stone-300/50 bg-[#ebe4d9] pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-0 shadow-none ring-1 ring-stone-300/40"
         aria-label="注文アクション"
       >
-        <div className="grid w-full grid-cols-3">
+        <div className="grid w-full grid-cols-2">
           <button
             type="button"
             className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 border-r border-stone-300/40 px-1 py-2 text-[11px] font-medium leading-tight text-stone-800 transition-colors hover:bg-stone-200/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stone-500 sm:text-xs"
@@ -534,19 +693,13 @@ export function GuestOrderApp() {
           </button>
           <button
             type="button"
-            className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 border-r border-amber-300/50 bg-amber-100 px-1 py-2 text-[11px] font-semibold leading-tight text-amber-950 transition-colors hover:bg-amber-200/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-amber-700 sm:text-xs"
-            onClick={() => setPanel("cart")}
+            className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 bg-amber-100 px-1 py-2 text-[11px] font-semibold leading-tight text-amber-950 transition-colors hover:bg-amber-200/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-amber-700 sm:text-xs"
+            onClick={() => {
+              setCheckoutError(null);
+              setPanel("orderList");
+            }}
           >
-            現在の
-            <br className="sm:hidden" />
-            カート
-          </button>
-          <button
-            type="button"
-            className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 bg-red-600 px-1 py-2 text-[11px] font-semibold leading-tight text-white transition-colors hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-red-800 sm:text-xs"
-            onClick={() => setPanel("checkout")}
-          >
-            注文する
+            注文リスト
           </button>
         </div>
       </nav>
