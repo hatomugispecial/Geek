@@ -60,7 +60,7 @@ function itemsByCategory(categoryId: MenuCategoryId): MenuItem[] {
 
 function LineThumb({ src, label }: { src: string; label: string }) {
   return (
-    <div className="relative size-11 shrink-0 overflow-hidden rounded-md border bg-muted ring-1 ring-border">
+    <div className="relative size-11 shrink-0 overflow-hidden rounded-md border border-orange-200/50 bg-orange-50/30 ring-1 ring-orange-100/50">
       <Image
         src={src}
         alt=""
@@ -86,25 +86,25 @@ function MenuItemCard({
         type="button"
         onClick={() => onSelect(item)}
         className={cn(
-          "flex w-full flex-col overflow-hidden rounded-lg border bg-card text-left ring-1 ring-border transition-colors",
-          "min-h-[44px] hover:bg-muted/40 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring",
+          "group flex w-full flex-col overflow-hidden rounded-xl border border-orange-200/45 bg-[#fffbf7] text-left ring-1 ring-orange-100/40 transition-colors",
+          "min-h-[44px] hover:border-orange-300/60 hover:bg-[#fff8f0] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-orange-600/40",
         )}
       >
-        <div className="relative aspect-square w-full overflow-hidden bg-muted">
+        <div className="relative aspect-square w-full overflow-hidden bg-orange-50/40">
           <Image
             src={item.imageUrl}
             alt={item.name}
             fill
             sizes="(max-width: 430px) 45vw, 200px"
-            className="object-cover"
+            className="object-cover motion-safe:transition-transform motion-safe:duration-500 motion-safe:ease-out group-hover:scale-[1.03]"
             loading="lazy"
           />
         </div>
-        <div className="flex flex-1 flex-col gap-1.5 p-2">
-          <span className="line-clamp-2 text-xs font-medium leading-snug sm:text-sm">
+        <div className="flex flex-1 flex-col gap-1.5 p-2.5">
+          <span className="line-clamp-2 text-sm font-semibold leading-snug tracking-tight text-stone-900 sm:text-base">
             {item.name}
           </span>
-          <span className="text-lg font-semibold tabular-nums tracking-tight text-foreground">
+          <span className="text-sm font-semibold tabular-nums tracking-tight text-orange-950 sm:text-base">
             ¥{item.price.toLocaleString("ja-JP")}
           </span>
         </div>
@@ -182,15 +182,14 @@ export function GuestOrderApp() {
   };
 
   return (
-    <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-background">
-      <header className="sticky top-0 z-20 border-b bg-background/95 px-4 py-3 backdrop-blur-sm">
-        <p className="text-[10px] font-medium tracking-wide text-muted-foreground">
+    <div className="mx-auto flex min-h-dvh w-full max-w-[430px] flex-col bg-[#f4efe6]">
+      <header className="sticky top-0 z-20 border-b border-stone-300/40 bg-[#f4efe6]/95 px-4 py-3 backdrop-blur-sm">
+        <p className="text-[10px] font-medium tracking-wide text-stone-600">
           株式会社 OSAKI ダイニング（架空）
         </p>
-        <h1 className="text-lg font-semibold tracking-wide">{GUEST_STORE_NAME}</h1>
-        <p className="mt-1 text-xs text-muted-foreground">
-          テーブル QR 想定・430px 幅で表示最適化
-        </p>
+        <h1 className="text-lg font-semibold tracking-wide text-stone-900">
+          {GUEST_STORE_NAME}
+        </h1>
       </header>
 
       <div className="flex-1 px-3 pb-28 pt-3">
@@ -208,7 +207,7 @@ export function GuestOrderApp() {
                 <TabsTrigger
                   key={t.id}
                   value={t.id}
-                  className="shrink-0 rounded-md px-2.5 py-2 text-xs data-active:shadow-none sm:text-sm"
+                  className="shrink-0 rounded-md px-2.5 py-2 text-xs text-stone-700 transition-colors data-active:shadow-none data-active:bg-orange-100/85 data-active:text-orange-950 data-active:ring-1 data-active:ring-orange-200/50 sm:text-sm"
                 >
                   {t.label}
                 </TabsTrigger>
@@ -232,7 +231,7 @@ export function GuestOrderApp() {
                     >
                       <h2
                         id={`cat-${cat.id}`}
-                        className="border-b border-border pb-1.5 text-sm font-semibold tracking-wide text-foreground"
+                        className="border-b border-orange-200/40 border-l-[3px] border-l-orange-500/55 pb-1.5 pl-2 text-sm font-semibold tracking-wide text-stone-900"
                       >
                         {cat.label}
                       </h2>
@@ -249,15 +248,26 @@ export function GuestOrderApp() {
                   ))}
                 </div>
               ) : (
-                <ul className="grid grid-cols-2 gap-3">
-                  {itemsByCategory(t.id).map((item) => (
-                    <MenuItemCard
-                      key={item.id}
-                      item={item}
-                      onSelect={openItem}
-                    />
-                  ))}
-                </ul>
+                <section
+                  className="scroll-mt-4"
+                  aria-labelledby={`cat-${t.id}`}
+                >
+                  <h2
+                    id={`cat-${t.id}`}
+                    className="border-b border-orange-200/40 border-l-[3px] border-l-orange-500/55 pb-1.5 pl-2 text-sm font-semibold tracking-wide text-stone-900"
+                  >
+                    {t.label}
+                  </h2>
+                  <ul className="mt-3 grid grid-cols-2 gap-3">
+                    {itemsByCategory(t.id).map((item) => (
+                      <MenuItemCard
+                        key={item.id}
+                        item={item}
+                        onSelect={openItem}
+                      />
+                    ))}
+                  </ul>
+                </section>
               )}
             </TabsContent>
           ))}
@@ -272,23 +282,25 @@ export function GuestOrderApp() {
         }}
       >
         <DialogContent
-          className="max-w-[min(100%,360px)] shadow-none ring-1 ring-border"
+          className="max-w-[min(100%,360px)] border-orange-100/60 bg-[#fffbf7] shadow-none ring-1 ring-orange-200/40"
           showCloseButton
         >
           {activeItem ? (
             <>
               <DialogHeader>
-                <DialogTitle>{activeItem.name}</DialogTitle>
-                <DialogDescription className="space-y-1 text-lg font-semibold tabular-nums text-foreground">
+                <DialogTitle className="text-xl text-stone-900 sm:text-2xl">
+                  {activeItem.name}
+                </DialogTitle>
+                <DialogDescription className="space-y-1 text-base font-semibold tabular-nums text-orange-950 sm:text-lg">
                   <span>
                     単価 ¥{activeItem.price.toLocaleString("ja-JP")}
                   </span>
-                  <span className="block text-xs font-normal text-muted-foreground">
+                  <span className="block text-sm font-normal text-stone-600">
                     税込想定
                   </span>
                 </DialogDescription>
               </DialogHeader>
-              <div className="relative mx-auto h-40 w-full max-w-[220px] overflow-hidden rounded-lg border bg-muted ring-1 ring-border">
+              <div className="relative mx-auto h-40 w-full max-w-[220px] overflow-hidden rounded-xl border border-orange-200/50 bg-orange-50/40 ring-1 ring-orange-100/50">
                 <Image
                   src={activeItem.imageUrl}
                   alt={activeItem.name}
@@ -325,7 +337,18 @@ export function GuestOrderApp() {
                 >
                   キャンセル
                 </Button>
-                <Button type="button" onClick={addFromDialog}>
+                <Button
+                  type="button"
+                  className="inline-flex items-center justify-center gap-2 rounded-[12px] bg-orange-600 text-white hover:bg-orange-700"
+                  onClick={addFromDialog}
+                >
+                  <svg
+                    className="size-5 shrink-0 fill-current"
+                    viewBox="0 0 20 20"
+                    aria-hidden
+                  >
+                    <path d="M10 3.5a1 1 0 0 1 1 1V9h4.5a1 1 0 1 1 0 2H11v4.5a1 1 0 1 1-2 0V11H4.5a1 1 0 1 1 0-2H9V4.5a1 1 0 0 1 1-1Z" />
+                  </svg>
                   追加
                 </Button>
               </DialogFooter>
@@ -342,7 +365,7 @@ export function GuestOrderApp() {
       >
         <SheetContent
           side="bottom"
-          className="mx-auto flex max-h-[85dvh] w-full max-w-[430px] flex-col rounded-t-xl border-x-0 border-t p-0 shadow-none ring-1 ring-border"
+          className="mx-auto flex max-h-[85dvh] w-full max-w-[430px] flex-col rounded-t-xl border-x-0 border-t border-orange-200/35 bg-[#fdfbf7] p-0 shadow-none ring-1 ring-orange-200/35"
         >
           {panel === "history" ? (
             <>
@@ -374,7 +397,7 @@ export function GuestOrderApp() {
                         <span className="shrink-0 tabular-nums text-muted-foreground">
                           ×{row.qty}
                         </span>
-                        <span className="shrink-0 text-base font-semibold tabular-nums">
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-950">
                           ¥{(row.unitPrice * row.qty).toLocaleString("ja-JP")}
                         </span>
                       </li>
@@ -382,10 +405,10 @@ export function GuestOrderApp() {
                   )}
                 </ul>
               </ScrollArea>
-              <div className="border-t bg-muted/30 px-4 py-3">
-                <div className="flex items-center justify-between text-base font-semibold">
+              <div className="border-t border-orange-200/40 bg-orange-50/60 px-4 py-3">
+                <div className="flex items-center justify-between text-base font-semibold text-stone-900">
                   <span>総額</span>
-                  <span className="tabular-nums">
+                  <span className="tabular-nums text-orange-950">
                     ¥{historyTotal.toLocaleString("ja-JP")}
                   </span>
                 </div>
@@ -420,7 +443,7 @@ export function GuestOrderApp() {
                         <span className="shrink-0 tabular-nums text-muted-foreground">
                           ×{qty}
                         </span>
-                        <span className="shrink-0 text-base font-semibold tabular-nums">
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-950">
                           ¥{(item.price * qty).toLocaleString("ja-JP")}
                         </span>
                       </li>
@@ -428,10 +451,10 @@ export function GuestOrderApp() {
                   )}
                 </ul>
               </ScrollArea>
-              <div className="border-t bg-muted/30 px-4 py-3">
-                <div className="flex items-center justify-between text-base font-semibold">
+              <div className="border-t border-orange-200/40 bg-orange-50/60 px-4 py-3">
+                <div className="flex items-center justify-between text-base font-semibold text-stone-900">
                   <span>小計</span>
-                  <span className="tabular-nums">
+                  <span className="tabular-nums text-orange-950">
                     ¥{cartSubtotal.toLocaleString("ja-JP")}
                   </span>
                 </div>
@@ -466,7 +489,7 @@ export function GuestOrderApp() {
                         <span className="shrink-0 tabular-nums text-muted-foreground">
                           ×{qty}
                         </span>
-                        <span className="shrink-0 text-base font-semibold tabular-nums">
+                        <span className="shrink-0 text-sm font-semibold tabular-nums text-orange-950">
                           ¥{(item.price * qty).toLocaleString("ja-JP")}
                         </span>
                       </li>
@@ -474,16 +497,16 @@ export function GuestOrderApp() {
                   )}
                 </ul>
               </ScrollArea>
-              <SheetFooter className="border-t bg-background px-4 py-3 sm:flex-col">
-                <div className="mb-3 flex w-full items-center justify-between text-base font-semibold">
+              <SheetFooter className="border-t border-orange-200/40 bg-orange-50/50 px-4 py-3 sm:flex-col">
+                <div className="mb-3 flex w-full items-center justify-between text-base font-semibold text-stone-900">
                   <span>お支払い予定（参考）</span>
-                  <span className="tabular-nums">
+                  <span className="tabular-nums text-orange-950">
                     ¥{cartSubtotal.toLocaleString("ja-JP")}
                   </span>
                 </div>
                 <Button
                   type="button"
-                  className="w-full rounded-[14px] py-6 text-base"
+                  className="w-full rounded-[14px] bg-red-600 py-6 text-base font-semibold text-white hover:bg-red-700"
                   disabled={cartLines.length === 0}
                   onClick={confirmOrder}
                 >
@@ -496,13 +519,13 @@ export function GuestOrderApp() {
       </Sheet>
 
       <nav
-        className="fixed bottom-0 left-1/2 z-30 flex w-full max-w-[430px] -translate-x-1/2 border-t bg-background pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-1 shadow-none ring-1 ring-border"
+        className="fixed bottom-0 left-1/2 z-30 flex w-full max-w-[430px] -translate-x-1/2 border-t border-stone-300/50 bg-[#ebe4d9] pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-0 shadow-none ring-1 ring-stone-300/40"
         aria-label="注文アクション"
       >
-        <div className="grid w-full grid-cols-3 divide-x divide-border">
+        <div className="grid w-full grid-cols-3">
           <button
             type="button"
-            className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium leading-tight text-foreground hover:bg-muted/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring sm:text-xs"
+            className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 border-r border-stone-300/40 px-1 py-2 text-[11px] font-medium leading-tight text-stone-800 transition-colors hover:bg-stone-200/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-stone-500 sm:text-xs"
             onClick={() => setPanel("history")}
           >
             今までの
@@ -511,7 +534,7 @@ export function GuestOrderApp() {
           </button>
           <button
             type="button"
-            className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium leading-tight text-foreground hover:bg-muted/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring sm:text-xs"
+            className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 border-r border-amber-300/50 bg-amber-100 px-1 py-2 text-[11px] font-semibold leading-tight text-amber-950 transition-colors hover:bg-amber-200/90 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-amber-700 sm:text-xs"
             onClick={() => setPanel("cart")}
           >
             現在の
@@ -520,7 +543,7 @@ export function GuestOrderApp() {
           </button>
           <button
             type="button"
-            className="flex min-h-[48px] flex-col items-center justify-center gap-0.5 px-1 py-2 text-[11px] font-medium leading-tight text-foreground hover:bg-muted/50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-ring sm:text-xs"
+            className="flex min-h-[52px] flex-col items-center justify-center gap-0.5 bg-red-600 px-1 py-2 text-[11px] font-semibold leading-tight text-white transition-colors hover:bg-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-red-800 sm:text-xs"
             onClick={() => setPanel("checkout")}
           >
             注文する
