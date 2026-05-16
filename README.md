@@ -1,79 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OSAKI ダイニング向けオーダーシステム（デモ）
 
-## Neon PostgreSQL（Vercel 想定）
+飲食店向けの **客席 QR からの注文** と **店舗側の受注・会計確認** を想定した Web アプリです。クライアント・店名は架空の「株式会社 OSAKI ダイニング」想定で、要件の詳細は [`Direction.md`](./Direction.md) にまとめています。
 
-サーバー側から Neon の PostgreSQL に接続する手順です。
+## 本番で使う
 
-1. [Neon](https://neon.tech/) でプロジェクトを作成し、ブランチの **Connection string**（`postgresql://...`）を控える。
-2. Neon の **SQL Editor** でリポジトリ内の [`db/orders-schema.sql`](./db/orders-schema.sql) を実行し、`orders` と `order_items` を作成する（注文の保存先・[`/neon-sample`](http://localhost:3000/neon-sample) の表示元）。
-3. プロジェクトルートに **`.env.local`** を作成し、少なくとも `DATABASE_URL` に Neon の接続文字列を設定する（変数の一覧と例は下記「環境変数（.env.local）」を参照）。
-4. **従業員向けログイン（Better Auth）**: Neon の SQL Editor で [`db/better-auth-schema.sql`](./db/better-auth-schema.sql) を実行し、`BETTER_AUTH_SECRET`（32 文字以上推奨）と `BETTER_AUTH_URL`（例: `http://localhost:3000`）を `.env.local` / Vercel の環境変数に設定する。初回は [`/register`](http://localhost:3000/register) で店舗ユーザーを作成し、[`/login`](http://localhost:3000/login) から [`/store`](http://localhost:3000/store) に入る。
-5. [Vercel](https://vercel.com/) にデプロイする場合は、プロジェクトの **Environment Variables** に `DATABASE_URL`・`BETTER_AUTH_SECRET`・`BETTER_AUTH_URL` を登録する（Neon の「Connect to Vercel」から連携してもよい）。
-6. ブラウザで [`/neon-sample`](http://localhost:3000/neon-sample) を開き、注文一覧（または空メッセージ）が表示されれば接続成功です。任意で [`db/neon-sample.sql`](./db/neon-sample.sql) を実行すると別デモ用テーブル `neon_sample` も作成できます。
+次の URL からブラウザで利用できます（Neon・認証の環境変数が Vercel に設定されていることが前提です）。
 
-### 注文 API（客向け → Neon）
+**[https://geek-practice.vercel.app](https://geek-practice.vercel.app)**
 
-1. 上記のとおり `orders` / `order_items` が存在していること（新規は `orders-schema.sql`、旧 DB は `orders-migration-v2-seat-status.sql` も参照）。
-2. [`/Order`](http://localhost:3000/Order) の「注文リスト」→「注文する」で **`POST /api/orders`** が呼ばれ、検証済みの内容が DB に保存される（任意の座席番号を同送可能）。
-3. `DATABASE_URL` が未設定のときは API は 503 を返す。
+| 画面 | パス | 説明 |
+|------|------|------|
+| 入口 | `/` | お客様用・店舗用への導線 |
+| 注文（客向け） | `/Order` | メニュー・カート・注文確定（`POST /api/orders` で Neon に保存） |
+| 店舗コンソール | `/store` | 受信注文の一覧・ステータス（ログイン必須） |
+| ログイン | `/login` | 店舗スタッフ用（Better Auth） |
+| 初回登録 | `/register` | 店舗アカウント作成（運用では導線を外す想定） |
+| DB 確認用 | `/neon-sample` | Neon の注文系テーブル表示のサンプル |
 
-### 店舗コンソール（受信注文）
+ローカルでは `npm run dev` 後に [http://localhost:3000](http://localhost:3000) から同様のパスで開けます。
 
-1. `DATABASE_URL` と `orders` / `order_items`（新規は `orders-schema.sql`、旧 DB は `orders-migration-v2-seat-status.sql` と [`db/orders-migration-v3-order-item-status.sql`](./db/orders-migration-v3-order-item-status.sql) を参照）が用意できていること。**未ログインでは `/store` と `GET/PATCH /api/store/**` にアクセスできません**（[`proxy.ts`](./proxy.ts) と各 Route Handler のセッション検証）。
-2. [`/store`](http://localhost:3000/store) の「受信注文（Neon）」で一覧取得（`GET /api/store/orders`）。座席をクエリ指定すると `summary` に取消除く合計金額などが含まれ、画面では明細行ごと（日時・メニュー・個数・小計）のお会計一覧を表示します。**料理（明細）ごとの**ステータス変更は `PATCH /api/store/orders/:id/lines/:lineId`。注文ヘッダの `orders.status` は明細から自動集計される。全明細を同じ状態に揃える場合は `PATCH /api/store/orders/:id` も利用できる。
-3. 既存 DB には [`db/orders-migration-v2-seat-status.sql`](./db/orders-migration-v2-seat-status.sql) で `seat_label` とステータス制約を、[`db/orders-migration-v3-order-item-status.sql`](./db/orders-migration-v3-order-item-status.sql) で `order_items.status` を追加できる。
+## 技術スタック
 
-## 環境変数（`.env.local`）
+- **Next.js**（App Router）・**React**・**TypeScript**
+- **Neon**（PostgreSQL）— 注文データと Better Auth 用ユーザー
+- **Better Auth** — 店舗向けセッション
 
-ローカルではリポジトリ直下に **`.env.local`** を置き、Next.js が読み込みます（Git には含めないでください）。Vercel では同じ名前を **Environment Variables** に登録します。**Production / Preview のビルド**でも `DATABASE_URL`・`BETTER_AUTH_SECRET`（32 文字以上）・`BETTER_AUTH_URL`（デプロイ先の `https://…`）を読み込めるようにしてください（未設定だとビルドやランタイムで失敗します）。
+## ディレクトリ構成（抜粋）
 
-緊急時のみ CI で `SKIP_ENV_VALIDATION=true` を渡すと、`next build` 中の env 厳格チェックを緩めます（通常は使わないでください）。
+```
+geek/
+├── app/                 # ページと Route Handler（/api/*）
+├── components/          # UI（orders / store / ui など）
+├── lib/                 # 認証・DB・API 向けロジック
+├── db/                  # Neon 用 SQL（スキーマ・マイグレーション）
+├── public/              # 静的ファイル
+├── proxy.ts             # 店舗ルート用のリクエストガード（Cookie の有無）
+├── Store/               # Direction.md 上の「店舗用」将来配置用（現状は README のみ）
+├── Backend/             # Direction.md 上のバックエンド将来配置用（現状は README のみ）
+└── Direction.md         # 要件・実装済みタスクのメモ
+```
+
+実装済みの店舗 UI は **`app/store`** と **`components/store`** にあります。ルートの `Store/`・`Backend/` は将来の分割用プレースホルダです。
+
+## セットアップ
+
+### 1. Neon（スキーマ）
+
+1. [Neon](https://neon.tech/) でプロジェクトを作成し、**Connection string** を取得する。
+2. SQL Editor で順に実行する（未実行だと注文・ログインが失敗します）。
+   - [`db/orders-schema.sql`](./db/orders-schema.sql) … `orders` / `order_items`
+   - [`db/better-auth-schema.sql`](./db/better-auth-schema.sql) … Better Auth 用テーブル
+3. 既存 DB 向けの差分は [`db/orders-migration-v2-seat-status.sql`](./db/orders-migration-v2-seat-status.sql)・[`db/orders-migration-v3-order-item-status.sql`](./db/orders-migration-v3-order-item-status.sql) を参照。
+
+### 2. 環境変数
+
+リポジトリ直下に **`.env.local`** を置く（Git に含めない）。Vercel では **Environment Variables** に同じ名前で登録する。**Production / Preview** 双方でビルド・ランタイムから参照できるようにする。
+
+| 変数 | 説明 |
+|------|------|
+| `DATABASE_URL` | Neon の接続文字列（Vercel 連携では `POSTGRES_URL` 等だけの場合もあり。アプリは複数キーを順に参照） |
+| `BETTER_AUTH_SECRET` | **32 文字以上**のランダム文字列。ターミナルで `openssl rand -base64 32` を実行し、**出力された1行だけ**を値に書く（コマンド全文を値にしない） |
+| `BETTER_AUTH_URL` | 公開 URL（例: `http://localhost:3000`、本番は `https://geek-practice.vercel.app`）。末尾の `/` は不要 |
+
+任意: `BETTER_AUTH_TRUSTED_ORIGINS`（カンマ区切りで追加オリジン）
 
 ```bash
-# Neon（PostgreSQL）接続文字列
 DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
-
-# Better Auth（従業員ログイン）。32 文字以上推奨（例: openssl rand -base64 32）
 BETTER_AUTH_SECRET=
-
-# アプリの公開オリジン（ローカル例: http://localhost:3000）。Vercel 本番では `https://あなたのドメイン` を推奨。未設定時は `VERCEL_URL`（`https://` 付き）が自動利用されます。
 BETTER_AUTH_URL=http://localhost:3000
-
-# 任意。カンマ区切りで追加の許可オリジン（プレビュー URL など）
-# BETTER_AUTH_TRUSTED_ORIGINS=https://branch--project.vercel.app
 ```
 
-## Getting Started
-
-First, run the development server:
+### 3. 開発サーバー
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+`SKIP_ENV_VALIDATION=true` は CI 等の緊急時のみ `next build` 向け。通常は使わない。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## API（参考）
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- `POST /api/orders` — 客向け注文の保存
+- `GET` / `PATCH` `/api/store/orders` … 店舗向け（セッション必須）
+- `PATCH` `/api/store/orders/:id` / `.../lines/:lineId` — 注文・明細の更新
 
-## Learn More
+`DATABASE_URL` が未設定のとき、注文系 API は 503 を返すことがあります。
 
-To learn more about Next.js, take a look at the following resources:
+## デプロイ
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+[Vercel](https://vercel.com/) に接続し、上記の環境変数と Neon を本番プロジェクトに設定してください。詳細は [Next.js のデプロイ手順](https://nextjs.org/docs/app/building-your-application/deploying)を参照してください。
