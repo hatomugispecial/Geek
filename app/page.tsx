@@ -40,6 +40,14 @@ export default function HomePage() {
         >
           店舗コンソール（デモ）
         </Button>
+        <Button
+          render={<Link href="/neon-sample" />}
+          variant="outline"
+          size="lg"
+          className="h-12 w-full justify-center rounded-[14px] text-base"
+        >
+          Neon DB 接続サンプル
+        </Button>
       </div>
       <Card className="shadow-none ring-1 ring-border">
         <CardHeader>

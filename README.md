@@ -1,5 +1,15 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Neon PostgreSQL（Vercel 想定）
+
+サーバー側から Neon の PostgreSQL に接続する手順です。
+
+1. [Neon](https://neon.tech/) でプロジェクトを作成し、ブランチの **Connection string**（`postgresql://...`）を控える。
+2. Neon の **SQL Editor** でリポジトリ内の [`db/neon-sample.sql`](./db/neon-sample.sql) を実行し、`neon_sample` テーブルとサンプル行を作成する。
+3. ローカルでは `.env.example` を参考に `.env.local` を作成し、`DATABASE_URL` に接続文字列を設定する。
+4. [Vercel](https://vercel.com/) にデプロイする場合は、プロジェクトの **Environment Variables** に `DATABASE_URL` を登録する（Neon の「Connect to Vercel」から連携してもよい）。
+5. ブラウザで [`/neon-sample`](http://localhost:3000/neon-sample) を開き、テーブル内容が表示されれば接続成功です。
+
 ## Getting Started
 
 First, run the development server:

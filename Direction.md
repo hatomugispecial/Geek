@@ -50,3 +50,5 @@ Neon の PostgreSQL にサンプルデータを格納し、それを Next.js 側
 Vercel と Neon を接続していること
 Neon の PostgreSQL にサンプルデータを格納していること
 Next.js から Neon の PostgreSQL に接続し、サンプルデータを表示できること
+
+---------------------ここまで反映済み（Neon / `DATABASE_URL` / `/neon-sample`）
