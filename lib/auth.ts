@@ -45,9 +45,14 @@ function resolveBetterAuthSecret(): string {
 function resolveBetterAuthBaseURL(): string {
   const raw = process.env.BETTER_AUTH_URL?.trim();
   if (raw) return raw;
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel && isProd && !relaxedBuild) {
+    const withScheme = vercel.startsWith("http") ? vercel : `https://${vercel}`;
+    return withScheme;
+  }
   if (isProd && !relaxedBuild) {
     throw new Error(
-      "BETTER_AUTH_URL が未設定です。本番サイトの公開 URL（例: https://example.com）を設定してください。",
+      "BETTER_AUTH_URL が未設定です。本番サイトの公開 URL（例: https://example.com）を設定するか、Vercel の VERCEL_URL に任せてください。",
     );
   }
   if (relaxedBuild) {
@@ -78,6 +83,14 @@ function buildTrustedOrigins(appBase: string): string[] {
       origins.add(o.includes("://") ? new URL(o).origin : new URL(`https://${o}`).origin);
     } catch {
       origins.add(o);
+    }
+  }
+  const vercel = process.env.VERCEL_URL?.trim();
+  if (vercel) {
+    try {
+      origins.add(vercel.startsWith("http") ? new URL(vercel).origin : new URL(`https://${vercel}`).origin);
+    } catch {
+      /* ignore */
     }
   }
   if (!isProd) {

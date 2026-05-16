@@ -6,9 +6,15 @@ import { auth } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export default async function StoreConsolePage() {
-  const session = await auth.api.getSession({
-    headers: await headers(),
-  });
+  let session;
+  try {
+    session = await auth.api.getSession({
+      headers: await headers(),
+    });
+  } catch (e) {
+    console.error("[store] getSession failed", e);
+    redirect("/login?callbackUrl=/store");
+  }
   if (!session) {
     redirect("/login?callbackUrl=/store");
   }

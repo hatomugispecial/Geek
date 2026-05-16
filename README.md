@@ -36,7 +36,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
 # Better Auth（従業員ログイン）。32 文字以上推奨（例: openssl rand -base64 32）
 BETTER_AUTH_SECRET=
 
-# アプリの公開オリジン（ローカル例: http://localhost:3000）
+# アプリの公開オリジン（ローカル例: http://localhost:3000）。Vercel 本番では `https://あなたのドメイン` を推奨。未設定時は `VERCEL_URL`（`https://` 付き）が自動利用されます。
 BETTER_AUTH_URL=http://localhost:3000
 
 # 任意。カンマ区切りで追加の許可オリジン（プレビュー URL など）
