@@ -9,6 +9,7 @@ import {
   MapPin,
   Search,
   Settings,
+  Smartphone,
   Store,
   Tags,
 } from "lucide-react";
@@ -157,10 +158,19 @@ export function OrdersDashboard() {
                   <SidebarMenuButton
                     isActive
                     tooltip="ダッシュボード"
-                    render={<Link href="/" />}
+                    render={<Link href="/store" />}
                   >
                     <LayoutDashboard />
                     <span>ダッシュボード</span>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton
+                    tooltip="お客様注文（QR想定）"
+                    render={<Link href="/Order" />}
+                  >
+                    <Smartphone />
+                    <span>お客様注文</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
                 <SidebarMenuItem>
@@ -208,7 +218,7 @@ export function OrdersDashboard() {
           <Breadcrumb>
             <BreadcrumbList>
               <BreadcrumbItem className="hidden md:block">
-                <BreadcrumbLink href="/">ホーム</BreadcrumbLink>
+                <BreadcrumbLink href="/store">ホーム</BreadcrumbLink>
               </BreadcrumbItem>
               <BreadcrumbSeparator className="hidden md:block" />
               <BreadcrumbItem>

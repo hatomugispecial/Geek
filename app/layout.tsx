@@ -16,9 +16,9 @@ const notoSansJp = Noto_Sans_JP({
 });
 
 export const metadata: Metadata = {
-  title: "OSAKI ダイニング | 注文オペレーション",
+  title: "OSAKI ダイニング | オーダーシステム",
   description:
-    "株式会社 OSAKI ダイニング向けの注文・店舗オペレーション管理コンソール（デモ画面）です。",
+    "株式会社 OSAKI ダイニング（架空）向けの客注文・店舗コンソールのデモ環境です。",
 };
 
 export const viewport: Viewport = {
